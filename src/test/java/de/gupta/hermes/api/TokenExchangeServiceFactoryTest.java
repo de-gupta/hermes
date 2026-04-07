@@ -29,13 +29,13 @@ final class TokenExchangeServiceFactoryTest
 		final TokenExchangeService service = TokenExchangeServiceFactory.hmac(
 				TokenVerificationPolicy.of(Duration.ZERO, true),
 				HermesTestTokens.UPSTREAM_SECRET,
-				TokenIssuancePolicy.of("hermes", Set.of("internal-service"), Duration.ofMinutes(30)),
+				TokenIssuancePolicy.of("Hermes", Set.of("internal-service"), Duration.ofMinutes(30)),
 				HermesTestTokens.INTERNAL_SECRET,
 				TokenExchangeConfiguration.of(externalId -> Optional.of(new TestUser("local-42", externalId)),
 						TestUser::id,
-						user -> Set.of("ROLE_ADMIN", "ROLE_USER"),
-						user -> 7L,
-						(user, upstreamToken) -> Map.of("tenant", "acme"),
+						_ -> Set.of("ROLE_ADMIN", "ROLE_USER"),
+						_ -> 7L,
+						(_, _) -> Map.of("tenant", "acme"),
 						FIXED_CLOCK));
 
 		final ExchangeResult result = service.exchange(HermesTestTokens.upstreamTokenWithSubject("external-123"));
@@ -50,7 +50,7 @@ final class TokenExchangeServiceFactoryTest
 
 		final Map<String, Object> claims = HermesTestTokens.parseInternalClaims(success.token().token());
 		assertThat(claims.get("sub")).isEqualTo("local-42");
-		assertThat(claims.get("iss")).isEqualTo("hermes");
+		assertThat(claims.get("iss")).isEqualTo("Hermes");
 		assertThat(HermesTestTokens.rolesFromClaims(claims)).containsExactlyInAnyOrder("ROLE_ADMIN", "ROLE_USER");
 		assertThat(claims.get("ver")).isEqualTo(7);
 		assertThat(claims.get("tenant")).isEqualTo("acme");
@@ -63,12 +63,12 @@ final class TokenExchangeServiceFactoryTest
 		final TokenExchangeService service = TokenExchangeServiceFactory.hmac(
 				TokenVerificationPolicy.of(Duration.ZERO, true),
 				HermesTestTokens.UPSTREAM_SECRET,
-				TokenIssuancePolicy.of("hermes", Set.of(), Duration.ofMinutes(30)),
+				TokenIssuancePolicy.of("Hermes", Set.of(), Duration.ofMinutes(30)),
 				HermesTestTokens.INTERNAL_SECRET,
-				TokenExchangeConfiguration.of(externalId -> Optional.empty(),
+				TokenExchangeConfiguration.of(_ -> Optional.empty(),
 						TestUser::id,
-						user -> Set.of(),
-						user -> 1L,
+						_ -> Set.of(),
+						_ -> 1L,
 						CustomClaimEnricher.none(),
 						FIXED_CLOCK));
 
