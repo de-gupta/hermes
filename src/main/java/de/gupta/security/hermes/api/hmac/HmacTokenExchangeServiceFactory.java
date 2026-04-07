@@ -1,14 +1,14 @@
 package de.gupta.security.hermes.api.hmac;
 
-import de.gupta.commons.security.api.TokenVerificationPolicy;
-import de.gupta.commons.security.api.TokenVerifier;
-import de.gupta.commons.security.api.TokenVerifierFactory;
 import de.gupta.security.hermes.adapter.TokenExchangeServiceFacadeFactory;
 import de.gupta.security.hermes.api.TokenExchangeConfiguration;
 import de.gupta.security.hermes.api.TokenExchangeService;
 import de.gupta.security.hermes.api.TokenIssuancePolicy;
 import de.gupta.security.hermes.application.service.InternalTokenExchangeServiceFactory;
 import de.gupta.security.hermes.controller.TokenExchangeControllerFactory;
+import de.gupta.security.themis.api.TokenVerificationPolicy;
+import de.gupta.security.themis.api.TokenVerifier;
+import de.gupta.security.themis.api.TokenVerifierFactory;
 
 import java.util.Objects;
 

@@ -1,12 +1,12 @@
 package de.gupta.hermes.api;
 
-import de.gupta.commons.security.api.TokenVerificationPolicy;
 import de.gupta.hermes.HermesTestTokens;
 import de.gupta.security.hermes.api.*;
 import de.gupta.security.hermes.domain.model.ExchangeFailure;
 import de.gupta.security.hermes.domain.model.ExchangeFailureReason;
 import de.gupta.security.hermes.domain.model.ExchangeResult;
 import de.gupta.security.hermes.domain.model.ExchangeSuccess;
+import de.gupta.security.themis.api.TokenVerificationPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;

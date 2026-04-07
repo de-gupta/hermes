@@ -1,6 +1,6 @@
 package de.gupta.security.hermes.api;
 
-import de.gupta.commons.security.domain.model.NormalizedToken;
+import de.gupta.security.themis.domain.model.NormalizedToken;
 
 import java.util.Map;
 

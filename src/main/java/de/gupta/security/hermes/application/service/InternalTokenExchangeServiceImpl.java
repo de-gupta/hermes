@@ -1,14 +1,14 @@
 package de.gupta.security.hermes.application.service;
 
-import de.gupta.commons.security.api.TokenVerifier;
-import de.gupta.commons.security.domain.model.NormalizedToken;
-import de.gupta.commons.security.domain.model.VerificationFailure;
-import de.gupta.commons.security.domain.model.VerificationResult;
-import de.gupta.commons.security.domain.model.VerificationSuccess;
 import de.gupta.commons.utility.string.StringSanitizationUtility;
 import de.gupta.security.hermes.api.TokenExchangeConfiguration;
 import de.gupta.security.hermes.api.TokenIssuancePolicy;
 import de.gupta.security.hermes.domain.model.*;
+import de.gupta.security.themis.api.TokenVerifier;
+import de.gupta.security.themis.domain.model.NormalizedToken;
+import de.gupta.security.themis.domain.model.VerificationFailure;
+import de.gupta.security.themis.domain.model.VerificationResult;
+import de.gupta.security.themis.domain.model.VerificationSuccess;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;

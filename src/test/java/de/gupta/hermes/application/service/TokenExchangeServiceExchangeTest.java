@@ -1,8 +1,5 @@
 package de.gupta.hermes.application.service;
 
-import de.gupta.commons.security.api.TokenVerificationPolicy;
-import de.gupta.commons.security.api.TokenVerifier;
-import de.gupta.commons.security.api.TokenVerifierFactory;
 import de.gupta.hermes.HermesTestTokens;
 import de.gupta.security.hermes.api.CustomClaimEnricher;
 import de.gupta.security.hermes.api.TokenExchangeConfiguration;
@@ -13,6 +10,9 @@ import de.gupta.security.hermes.domain.model.ExchangeFailure;
 import de.gupta.security.hermes.domain.model.ExchangeFailureReason;
 import de.gupta.security.hermes.domain.model.ExchangeResult;
 import de.gupta.security.hermes.domain.model.ExchangeSuccess;
+import de.gupta.security.themis.api.TokenVerificationPolicy;
+import de.gupta.security.themis.api.TokenVerifier;
+import de.gupta.security.themis.api.TokenVerifierFactory;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;

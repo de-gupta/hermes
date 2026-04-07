@@ -1,8 +1,8 @@
 package de.gupta.security.hermes.application.service;
 
-import de.gupta.commons.security.api.TokenVerifier;
 import de.gupta.security.hermes.api.TokenExchangeConfiguration;
 import de.gupta.security.hermes.api.TokenIssuancePolicy;
+import de.gupta.security.themis.api.TokenVerifier;
 
 public final class InternalTokenExchangeServiceFactory
 {
