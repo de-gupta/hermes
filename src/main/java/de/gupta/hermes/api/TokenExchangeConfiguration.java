@@ -66,7 +66,8 @@ public final class TokenExchangeConfiguration<User>
 				Objects.requireNonNull(localSubjectResolver, "localSubjectResolver must not be null"),
 				Objects.requireNonNull(roleResolver, "roleResolver must not be null"),
 				Objects.requireNonNull(tokenVersionResolver, "tokenVersionResolver must not be null"),
-				customClaimEnricher, clock);
+				Objects.requireNonNull(customClaimEnricher, "customClaimEnricher must not be null"),
+				Objects.requireNonNull(clock, "clock must not be null"));
 	}
 
 	public String externalIdentityClaimName()

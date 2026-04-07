@@ -40,56 +40,68 @@ final class TokenExchangeServiceImpl<User> implements TokenExchangeService
 	@Override
 	public ExchangeResult exchange(final TokenExchangeRequest request)
 	{
+		final VerificationResult verificationResult = upstreamTokenVerifier.verify(request.externalToken());
+		if (verificationResult instanceof VerificationFailure failure)
+		{
+			return ExchangeFailure.of(ExchangeFailureReason.UPSTREAM_VERIFICATION_FAILED, failure.reason().name());
+		}
+
+		final NormalizedToken upstreamToken = ((VerificationSuccess) verificationResult).token();
+		final Optional<String> externalIdentity = resolveExternalIdentity(upstreamToken);
+		if (externalIdentity.isEmpty())
+		{
+			return ExchangeFailure.of(ExchangeFailureReason.MISSING_EXTERNAL_IDENTITY,
+					configuration.externalIdentityClaimName());
+		}
+
+		final Optional<User> user = configuration.userResolver().resolveUser(externalIdentity.get());
+		if (user.isEmpty())
+		{
+			return ExchangeFailure.of(ExchangeFailureReason.USER_NOT_FOUND, externalIdentity.get());
+		}
+
+		final String subject = configuration.localSubjectResolver().resolveSubject(user.get());
+		if (subject == null || subject.isBlank())
+		{
+			return ExchangeFailure.of(ExchangeFailureReason.MISSING_LOCAL_SUBJECT);
+		}
+
+		final Set<String> roles = new LinkedHashSet<>(configuration.roleResolver().fetchRoles(user.get()));
+		final long version = configuration.tokenVersionResolver().resolveVersion(user.get());
+		final Instant issuedAt = request.issuedAt();
+		final Instant expiresAt = issuedAt.plus(issuancePolicy.timeToLive());
+		final Optional<String> tokenId = issuancePolicy.includeTokenId()
+				? Optional.of(UUID.randomUUID().toString())
+				: Optional.empty();
+
+		final Map<String, Object> claims =
+				new LinkedHashMap<>(configuration.customClaimEnricher().enrich(user.get(), upstreamToken));
+		claims.put(issuancePolicy.roleClaimName(), List.copyOf(roles));
+		claims.put(issuancePolicy.versionClaimName(), version);
+		issuancePolicy.upstreamIssuerClaimName()
+		              .flatMap(claimName -> upstreamToken.issuer().map(issuer -> Map.entry(claimName, issuer)))
+		              .ifPresent(entry -> claims.put(entry.getKey(), entry.getValue()));
+
+		return issueToken(subject, roles, version, issuedAt, expiresAt, tokenId, claims, upstreamToken);
+	}
+
+	private ExchangeResult issueToken(final String subject,
+	                                  final Set<String> roles,
+	                                  final long version,
+	                                  final Instant issuedAt,
+	                                  final Instant expiresAt,
+	                                  final Optional<String> tokenId,
+	                                  final Map<String, Object> claims,
+	                                  final NormalizedToken upstreamToken)
+	{
 		try
 		{
-			final VerificationResult verificationResult = upstreamTokenVerifier.verify(request.externalToken());
-			if (verificationResult instanceof VerificationFailure failure)
-			{
-				return ExchangeFailure.of(ExchangeFailureReason.UPSTREAM_VERIFICATION_FAILED, failure.reason().name());
-			}
-
-			final NormalizedToken upstreamToken = ((VerificationSuccess) verificationResult).token();
-			final Optional<String> externalIdentity = resolveExternalIdentity(upstreamToken);
-			if (externalIdentity.isEmpty())
-			{
-				return ExchangeFailure.of(ExchangeFailureReason.MISSING_EXTERNAL_IDENTITY,
-						configuration.externalIdentityClaimName());
-			}
-
-			final Optional<User> user = configuration.userResolver().resolveUser(externalIdentity.get());
-			if (user.isEmpty())
-			{
-				return ExchangeFailure.of(ExchangeFailureReason.USER_NOT_FOUND, externalIdentity.get());
-			}
-
-			final String subject = configuration.localSubjectResolver().resolveSubject(user.get());
-			if (subject == null || subject.isBlank())
-			{
-				return ExchangeFailure.of(ExchangeFailureReason.MISSING_LOCAL_SUBJECT);
-			}
-
-			final Set<String> roles = new LinkedHashSet<>(configuration.roleResolver().fetchRoles(user.get()));
-			final long version = configuration.tokenVersionResolver().resolveVersion(user.get());
-			final Instant issuedAt = request.issuedAt();
-			final Instant expiresAt = issuedAt.plus(issuancePolicy.timeToLive());
-			final Optional<String> tokenId = issuancePolicy.includeTokenId()
-					? Optional.of(UUID.randomUUID().toString())
-					: Optional.empty();
-
-			final Map<String, Object> claims = new LinkedHashMap<>();
-			claims.putAll(configuration.customClaimEnricher().enrich(user.get(), upstreamToken));
-			claims.put(issuancePolicy.roleClaimName(), List.copyOf(roles));
-			claims.put(issuancePolicy.versionClaimName(), version);
-			issuancePolicy.upstreamIssuerClaimName()
-			              .flatMap(claimName -> upstreamToken.issuer().map(issuer -> Map.entry(claimName, issuer)))
-			              .ifPresent(entry -> claims.put(entry.getKey(), entry.getValue()));
-
 			final var builder = Jwts.builder()
+			                        .claims(claims)
 			                        .subject(subject)
 			                        .issuer(issuancePolicy.issuer())
 			                        .issuedAt(Date.from(issuedAt))
 			                        .expiration(Date.from(expiresAt))
-			                        .claims(claims)
 			                        .signWith(Keys.hmacShaKeyFor(issuerSecret));
 
 			if (!issuancePolicy.audiences().isEmpty())
