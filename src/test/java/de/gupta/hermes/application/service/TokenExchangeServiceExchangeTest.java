@@ -38,7 +38,7 @@ final class TokenExchangeServiceExchangeTest
 	private static final Clock FIXED_CLOCK =
 			Clock.fixed(Instant.parse("2026-04-08T10:15:30Z"), ZoneOffset.UTC);
 
-	private InternalTokenExchangeService<TestUser> service(final TokenExchangeConfiguration<TestUser> configuration)
+	private InternalTokenExchangeService service(final TokenExchangeConfiguration<TestUser> configuration)
 	{
 		return service(TokenVerifierFactory.hmac(TokenVerificationPolicy.of(Duration.ZERO, true),
 						HermesTestTokens.UPSTREAM_SECRET),
@@ -47,12 +47,12 @@ final class TokenExchangeServiceExchangeTest
 				configuration);
 	}
 
-	private InternalTokenExchangeService<TestUser> service(final TokenVerifier verifier,
-	                                                       final TokenIssuancePolicy issuancePolicy,
-	                                                       final String internalSecret,
-	                                                       final TokenExchangeConfiguration<TestUser> configuration)
+	private InternalTokenExchangeService service(final TokenVerifier verifier,
+	                                             final TokenIssuancePolicy issuancePolicy,
+	                                             final String internalSecret,
+	                                             final TokenExchangeConfiguration<TestUser> configuration)
 	{
-		return InternalTokenExchangeService.create(verifier, issuancePolicy, internalSecret, configuration);
+		return InternalTokenExchangeServiceFactory.create(verifier, issuancePolicy, internalSecret, configuration);
 	}
 
 	private TokenExchangeConfiguration<TestUser> defaultConfiguration()

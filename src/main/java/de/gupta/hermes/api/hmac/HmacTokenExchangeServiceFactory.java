@@ -3,12 +3,12 @@ package de.gupta.hermes.api.hmac;
 import de.gupta.commons.security.api.TokenVerificationPolicy;
 import de.gupta.commons.security.api.TokenVerifier;
 import de.gupta.commons.security.api.TokenVerifierFactory;
-import de.gupta.hermes.adapter.TokenExchangeServiceFacade;
+import de.gupta.hermes.adapter.TokenExchangeServiceFacadeFactory;
 import de.gupta.hermes.api.TokenExchangeConfiguration;
 import de.gupta.hermes.api.TokenExchangeService;
 import de.gupta.hermes.api.TokenIssuancePolicy;
-import de.gupta.hermes.application.service.InternalTokenExchangeService;
-import de.gupta.hermes.controller.TokenExchangeController;
+import de.gupta.hermes.application.service.InternalTokenExchangeServiceFactory;
+import de.gupta.hermes.controller.TokenExchangeControllerFactory;
 
 import java.util.Objects;
 
@@ -25,9 +25,9 @@ public final class HmacTokenExchangeServiceFactory
 		Objects.requireNonNull(configuration, "configuration must not be null");
 
 		return HmacTokenExchangeService.create(
-				TokenExchangeController.create(
-						TokenExchangeServiceFacade.create(
-								InternalTokenExchangeService.create(upstreamTokenVerifier,
+				TokenExchangeControllerFactory.create(
+						TokenExchangeServiceFacadeFactory.create(
+								InternalTokenExchangeServiceFactory.create(upstreamTokenVerifier,
 										issuancePolicy,
 										issuerSecret,
 										configuration),
