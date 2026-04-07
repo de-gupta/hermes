@@ -57,4 +57,18 @@ final class TokenIssuancePolicyTest
 				.isInstanceOf(IllegalArgumentException.class)
 				.hasMessage("upstreamIssuerClaimName must not be blank");
 	}
+
+	@Test
+	void shouldRejectNullUpstreamIssuerClaimOptional()
+	{
+		assertThatThrownBy(() -> TokenIssuancePolicy.of("hermes",
+				Set.of(),
+				Duration.ofMinutes(15),
+				"roles",
+				"ver",
+				null,
+				false))
+				.isInstanceOf(NullPointerException.class)
+				.hasMessage("upstreamIssuerClaimName must not be null");
+	}
 }

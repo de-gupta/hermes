@@ -1,5 +1,8 @@
 package de.gupta.hermes.api;
 
+import de.gupta.aletheia.functional.Unfolding;
+import de.gupta.commons.utility.string.StringSanitizationUtility;
+
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
@@ -37,10 +40,9 @@ public final class TokenIssuancePolicy
 		final Set<String> normalizedAudiences = Set.copyOf(Objects.requireNonNull(audiences, "audiences must not be null"));
 		final String normalizedRoleClaimName = requireNonBlank(roleClaimName, "roleClaimName must not be blank");
 		final String normalizedVersionClaimName = requireNonBlank(versionClaimName, "versionClaimName must not be blank");
-		// TODO: again no null check, rather expose separate method without those args and call this with default value
-		final Optional<String> normalizedUpstreamIssuerClaimName = upstreamIssuerClaimName == null
-				? Optional.of("upstream_iss")
-				: upstreamIssuerClaimName.map(value -> requireNonBlank(value, "upstreamIssuerClaimName must not be blank"));
+		final Optional<String> normalizedUpstreamIssuerClaimName =
+				Objects.requireNonNull(upstreamIssuerClaimName, "upstreamIssuerClaimName must not be null")
+				       .map(value -> requireNonBlank(value, "upstreamIssuerClaimName must not be blank"));
 
 		return new TokenIssuancePolicy(normalizedIssuer,
 				normalizedAudiences,
@@ -133,12 +135,10 @@ public final class TokenIssuancePolicy
 
 	private static String requireNonBlank(final String value, final String message)
 	{
-		Objects.requireNonNull(value, message);
-		if (value.isBlank())
-		{
-			throw new IllegalArgumentException(message);
-		}
-		return value;
+		return Unfolding.beckon(value)
+						 .discern(StringSanitizationUtility::isNotBlank,
+						         () -> new IllegalArgumentException(message))
+				.summon();
 	}
 
 	private TokenIssuancePolicy(final String issuer,
