@@ -1,5 +1,6 @@
 package de.gupta.hermes.api;
 
+import de.gupta.security.hermes.api.TokenIssuancePolicy;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;

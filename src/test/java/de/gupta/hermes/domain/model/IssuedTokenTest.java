@@ -1,5 +1,6 @@
 package de.gupta.hermes.domain.model;
 
+import de.gupta.security.hermes.domain.model.IssuedToken;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

@@ -1,0 +1,10 @@
+package de.gupta.security.hermes.domain.model;
+
+public enum ExchangeFailureReason
+{
+	UPSTREAM_VERIFICATION_FAILED,
+	MISSING_EXTERNAL_IDENTITY,
+	USER_NOT_FOUND,
+	MISSING_LOCAL_SUBJECT,
+	ISSUANCE_FAILED
+}

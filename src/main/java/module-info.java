@@ -1,7 +1,7 @@
 module hermes
 {
-	exports de.gupta.hermes.api;
-	exports de.gupta.hermes.domain.model;
+	exports de.gupta.security.hermes.api;
+	exports de.gupta.security.hermes.domain.model;
 
 	requires jjwt.api;
 

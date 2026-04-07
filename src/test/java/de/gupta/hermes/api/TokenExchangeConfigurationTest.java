@@ -1,5 +1,7 @@
 package de.gupta.hermes.api;
 
+import de.gupta.security.hermes.api.CustomClaimEnricher;
+import de.gupta.security.hermes.api.TokenExchangeConfiguration;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
