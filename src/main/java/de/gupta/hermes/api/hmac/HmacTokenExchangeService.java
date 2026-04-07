@@ -1,5 +1,6 @@
-package de.gupta.hermes.api;
+package de.gupta.hermes.api.hmac;
 
+import de.gupta.hermes.api.TokenExchangeService;
 import de.gupta.hermes.controller.TokenExchangeController;
 import de.gupta.hermes.domain.model.ExchangeResult;
 

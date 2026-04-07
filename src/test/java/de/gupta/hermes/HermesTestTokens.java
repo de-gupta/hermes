@@ -16,11 +16,12 @@ public final class HermesTestTokens
 
 	public static String upstreamTokenWithSubject(final String subject)
 	{
+		final Instant now = Instant.now();
 		return Jwts.builder()
 		           .subject(subject)
 		           .issuer("https://supabase.example")
-		           .issuedAt(Date.from(Instant.parse("2026-04-08T10:15:30Z")))
-		           .expiration(Date.from(Instant.parse("2026-04-08T11:15:30Z")))
+		           .issuedAt(Date.from(now.minusSeconds(60)))
+		           .expiration(Date.from(now.plusSeconds(3600)))
 		           .claim("email", subject + "@example.com")
 		           .signWith(Keys.hmacShaKeyFor(UPSTREAM_SECRET.getBytes(StandardCharsets.UTF_8)))
 		           .compact();
@@ -28,11 +29,12 @@ public final class HermesTestTokens
 
 	public static String upstreamTokenWithEmail(final String subject, final String email)
 	{
+		final Instant now = Instant.now();
 		return Jwts.builder()
 		           .subject(subject)
 		           .issuer("https://supabase.example")
-		           .issuedAt(Date.from(Instant.parse("2026-04-08T10:15:30Z")))
-		           .expiration(Date.from(Instant.parse("2026-04-08T11:15:30Z")))
+		           .issuedAt(Date.from(now.minusSeconds(60)))
+		           .expiration(Date.from(now.plusSeconds(3600)))
 		           .claim("email", email)
 		           .signWith(Keys.hmacShaKeyFor(UPSTREAM_SECRET.getBytes(StandardCharsets.UTF_8)))
 		           .compact();
@@ -40,11 +42,12 @@ public final class HermesTestTokens
 
 	public static String upstreamTokenWithoutClaim(final String subject)
 	{
+		final Instant now = Instant.now();
 		return Jwts.builder()
 		           .subject(subject)
 		           .issuer("https://supabase.example")
-		           .issuedAt(Date.from(Instant.parse("2026-04-08T10:15:30Z")))
-		           .expiration(Date.from(Instant.parse("2026-04-08T11:15:30Z")))
+		           .issuedAt(Date.from(now.minusSeconds(60)))
+		           .expiration(Date.from(now.plusSeconds(3600)))
 		           .signWith(Keys.hmacShaKeyFor(UPSTREAM_SECRET.getBytes(StandardCharsets.UTF_8)))
 		           .compact();
 	}

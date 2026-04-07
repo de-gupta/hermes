@@ -7,11 +7,8 @@ import de.gupta.commons.security.domain.model.VerificationResult;
 import de.gupta.commons.security.domain.model.VerificationSuccess;
 import de.gupta.hermes.api.TokenExchangeConfiguration;
 import de.gupta.hermes.api.TokenIssuancePolicy;
-import de.gupta.hermes.domain.model.ExchangeFailure;
-import de.gupta.hermes.domain.model.ExchangeFailureReason;
-import de.gupta.hermes.domain.model.ExchangeResult;
-import de.gupta.hermes.domain.model.ExchangeSuccess;
-import de.gupta.hermes.domain.model.IssuedToken;
+import de.gupta.hermes.domain.model.*;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
@@ -19,28 +16,28 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 
-final class TokenExchangeServiceImpl<User> implements TokenExchangeService
+// TODO: change back to inerface/impl/factory trio
+public final class InternalTokenExchangeService<User>
 {
 	private final TokenVerifier upstreamTokenVerifier;
 	private final TokenIssuancePolicy issuancePolicy;
 	private final byte[] issuerSecret;
 	private final TokenExchangeConfiguration<User> configuration;
 
-	static <User> TokenExchangeService create(final TokenVerifier upstreamTokenVerifier,
-	                                          final TokenIssuancePolicy issuancePolicy,
-	                                          final String issuerSecret,
-	                                          final TokenExchangeConfiguration<User> configuration)
+	public static <User> InternalTokenExchangeService<User> create(final TokenVerifier upstreamTokenVerifier,
+	                                                               final TokenIssuancePolicy issuancePolicy,
+	                                                               final String issuerSecret,
+	                                                               final TokenExchangeConfiguration<User> configuration)
 	{
-		return new TokenExchangeServiceImpl<>(upstreamTokenVerifier,
-				issuancePolicy,
+		return new InternalTokenExchangeService<>(upstreamTokenVerifier, issuancePolicy,
 				issuerSecret.getBytes(StandardCharsets.UTF_8),
 				configuration);
 	}
 
-	@Override
-	public ExchangeResult exchange(final TokenExchangeRequest request)
+	// TODO: refactor into smaller focussed methods and use unfolding for composition and fluent api; draw inspiration from service class from themis
+	public ExchangeResult exchange(final String externalToken, final Instant issuedAt)
 	{
-		final VerificationResult verificationResult = upstreamTokenVerifier.verify(request.externalToken());
+		final VerificationResult verificationResult = upstreamTokenVerifier.verify(externalToken);
 		if (verificationResult instanceof VerificationFailure failure)
 		{
 			return ExchangeFailure.of(ExchangeFailureReason.UPSTREAM_VERIFICATION_FAILED, failure.reason().name());
@@ -68,14 +65,13 @@ final class TokenExchangeServiceImpl<User> implements TokenExchangeService
 
 		final Set<String> roles = new LinkedHashSet<>(configuration.roleResolver().fetchRoles(user.get()));
 		final long version = configuration.tokenVersionResolver().resolveVersion(user.get());
-		final Instant issuedAt = request.issuedAt();
 		final Instant expiresAt = issuedAt.plus(issuancePolicy.timeToLive());
 		final Optional<String> tokenId = issuancePolicy.includeTokenId()
 				? Optional.of(UUID.randomUUID().toString())
 				: Optional.empty();
 
-		final Map<String, Object> claims =
-				new LinkedHashMap<>(configuration.customClaimEnricher().enrich(user.get(), upstreamToken));
+		final Map<String, Object> claims = new LinkedHashMap<>();
+		claims.putAll(configuration.customClaimEnricher().enrich(user.get(), upstreamToken));
 		claims.put(issuancePolicy.roleClaimName(), List.copyOf(roles));
 		claims.put(issuancePolicy.versionClaimName(), version);
 		issuancePolicy.upstreamIssuerClaimName()
@@ -121,7 +117,7 @@ final class TokenExchangeServiceImpl<User> implements TokenExchangeService
 					tokenId,
 					upstreamToken.issuer()));
 		}
-		catch (RuntimeException exception)
+		catch (JwtException exception)
 		{
 			return ExchangeFailure.of(ExchangeFailureReason.ISSUANCE_FAILED, exception.getMessage());
 		}
@@ -136,10 +132,10 @@ final class TokenExchangeServiceImpl<User> implements TokenExchangeService
 		return upstreamToken.stringClaim(configuration.externalIdentityClaimName());
 	}
 
-	private TokenExchangeServiceImpl(final TokenVerifier upstreamTokenVerifier,
-	                                 final TokenIssuancePolicy issuancePolicy,
-	                                 final byte[] issuerSecret,
-	                                 final TokenExchangeConfiguration<User> configuration)
+	private InternalTokenExchangeService(final TokenVerifier upstreamTokenVerifier,
+	                                     final TokenIssuancePolicy issuancePolicy,
+	                                     final byte[] issuerSecret,
+	                                     final TokenExchangeConfiguration<User> configuration)
 	{
 		this.upstreamTokenVerifier = upstreamTokenVerifier;
 		this.issuancePolicy = issuancePolicy;

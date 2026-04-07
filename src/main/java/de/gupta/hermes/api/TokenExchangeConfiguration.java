@@ -6,15 +6,30 @@ import de.gupta.commons.utility.string.StringSanitizationUtility;
 import java.time.Clock;
 import java.util.Objects;
 
-public final class TokenExchangeConfiguration<User>
+public record TokenExchangeConfiguration<User>(String externalIdentityClaimName,
+                                               UserResolver<String, User> userResolver,
+                                               LocalSubjectResolver<User> localSubjectResolver,
+                                               RoleResolver<User> roleResolver,
+                                               TokenVersionResolver<User> tokenVersionResolver,
+                                               CustomClaimEnricher<User> customClaimEnricher,
+                                               Clock clock)
 {
-	private final String externalIdentityClaimName;
-	private final UserResolver<String, User> userResolver;
-	private final LocalSubjectResolver<User> localSubjectResolver;
-	private final RoleResolver<User> roleResolver;
-	private final TokenVersionResolver<User> tokenVersionResolver;
-	private final CustomClaimEnricher<User> customClaimEnricher;
-	private final Clock clock;
+	public static <User> TokenExchangeConfiguration<User> of(final String externalIdentityClaimName,
+	                                                         final UserResolver<String, User> userResolver,
+	                                                         final LocalSubjectResolver<User> localSubjectResolver,
+	                                                         final RoleResolver<User> roleResolver,
+	                                                         final TokenVersionResolver<User> tokenVersionResolver,
+	                                                         final CustomClaimEnricher<User> customClaimEnricher,
+	                                                         final Clock clock)
+	{
+		return new TokenExchangeConfiguration<>(externalIdentityClaimName,
+				userResolver,
+				localSubjectResolver,
+				roleResolver,
+				tokenVersionResolver,
+				customClaimEnricher,
+				clock);
+	}
 
 	public static <User> TokenExchangeConfiguration<User> of(final UserResolver<String, User> userResolver,
 	                                                         final LocalSubjectResolver<User> localSubjectResolver,
@@ -46,79 +61,23 @@ public final class TokenExchangeConfiguration<User>
 				clock);
 	}
 
-	public static <User> TokenExchangeConfiguration<User> of(final String externalIdentityClaimName,
-	                                                         final UserResolver<String, User> userResolver,
-	                                                         final LocalSubjectResolver<User> localSubjectResolver,
-	                                                         final RoleResolver<User> roleResolver,
-	                                                         final TokenVersionResolver<User> tokenVersionResolver,
-	                                                         final CustomClaimEnricher<User> customClaimEnricher,
-	                                                         final Clock clock)
+	public TokenExchangeConfiguration
 	{
-		final String normalizedClaimName = Unfolding.beckon(externalIdentityClaimName)
-		                                            .discern(StringSanitizationUtility::isNotBlank,
-															() -> new IllegalArgumentException(
-						                                            "externalIdentityClaimName must not be " +
-																			"blank"))
-		                                            .summon();
-
-		return new TokenExchangeConfiguration<>(normalizedClaimName,
-				Objects.requireNonNull(userResolver, "userResolver must not be null"),
-				Objects.requireNonNull(localSubjectResolver, "localSubjectResolver must not be null"),
-				Objects.requireNonNull(roleResolver, "roleResolver must not be null"),
-				Objects.requireNonNull(tokenVersionResolver, "tokenVersionResolver must not be null"),
-				Objects.requireNonNull(customClaimEnricher, "customClaimEnricher must not be null"),
-				Objects.requireNonNull(clock, "clock must not be null"));
+		externalIdentityClaimName = requireNonBlank(externalIdentityClaimName,
+				"externalIdentityClaimName must not be blank");
+		userResolver = Objects.requireNonNull(userResolver, "userResolver must not be null");
+		localSubjectResolver = Objects.requireNonNull(localSubjectResolver, "localSubjectResolver must not be null");
+		roleResolver = Objects.requireNonNull(roleResolver, "roleResolver must not be null");
+		tokenVersionResolver = Objects.requireNonNull(tokenVersionResolver, "tokenVersionResolver must not be null");
+		customClaimEnricher = Objects.requireNonNull(customClaimEnricher, "customClaimEnricher must not be null");
+		clock = Objects.requireNonNull(clock, "clock must not be null");
 	}
 
-	public String externalIdentityClaimName()
+	private static String requireNonBlank(final String value, final String message)
 	{
-		return externalIdentityClaimName;
-	}
-
-	public UserResolver<String, User> userResolver()
-	{
-		return userResolver;
-	}
-
-	public LocalSubjectResolver<User> localSubjectResolver()
-	{
-		return localSubjectResolver;
-	}
-
-	public RoleResolver<User> roleResolver()
-	{
-		return roleResolver;
-	}
-
-	public TokenVersionResolver<User> tokenVersionResolver()
-	{
-		return tokenVersionResolver;
-	}
-
-	public CustomClaimEnricher<User> customClaimEnricher()
-	{
-		return customClaimEnricher;
-	}
-
-	public Clock clock()
-	{
-		return clock;
-	}
-
-	private TokenExchangeConfiguration(final String externalIdentityClaimName,
-	                                   final UserResolver<String, User> userResolver,
-	                                   final LocalSubjectResolver<User> localSubjectResolver,
-	                                   final RoleResolver<User> roleResolver,
-	                                   final TokenVersionResolver<User> tokenVersionResolver,
-	                                   final CustomClaimEnricher<User> customClaimEnricher,
-	                                   final Clock clock)
-	{
-		this.externalIdentityClaimName = externalIdentityClaimName;
-		this.userResolver = userResolver;
-		this.localSubjectResolver = localSubjectResolver;
-		this.roleResolver = roleResolver;
-		this.tokenVersionResolver = tokenVersionResolver;
-		this.customClaimEnricher = customClaimEnricher;
-		this.clock = clock;
+		return Unfolding.beckon(value)
+		                .discern(StringSanitizationUtility::isNotBlank,
+								() -> new IllegalArgumentException(message))
+		                .summon();
 	}
 }

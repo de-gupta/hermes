@@ -38,7 +38,7 @@ final class TokenExchangeServiceExchangeTest
 	private static final Clock FIXED_CLOCK =
 			Clock.fixed(Instant.parse("2026-04-08T10:15:30Z"), ZoneOffset.UTC);
 
-	private TokenExchangeService service(final TokenExchangeConfiguration<TestUser> configuration)
+	private InternalTokenExchangeService<TestUser> service(final TokenExchangeConfiguration<TestUser> configuration)
 	{
 		return service(TokenVerifierFactory.hmac(TokenVerificationPolicy.of(Duration.ZERO, true),
 						HermesTestTokens.UPSTREAM_SECRET),
@@ -47,20 +47,20 @@ final class TokenExchangeServiceExchangeTest
 				configuration);
 	}
 
-	private TokenExchangeService service(final TokenVerifier verifier,
-	                                    final TokenIssuancePolicy issuancePolicy,
-	                                    final String internalSecret,
-	                                    final TokenExchangeConfiguration<TestUser> configuration)
+	private InternalTokenExchangeService<TestUser> service(final TokenVerifier verifier,
+	                                                       final TokenIssuancePolicy issuancePolicy,
+	                                                       final String internalSecret,
+	                                                       final TokenExchangeConfiguration<TestUser> configuration)
 	{
-		return TokenExchangeServiceFactory.create(verifier, issuancePolicy, internalSecret, configuration);
+		return InternalTokenExchangeService.create(verifier, issuancePolicy, internalSecret, configuration);
 	}
 
 	private TokenExchangeConfiguration<TestUser> defaultConfiguration()
 	{
 		return TokenExchangeConfiguration.of(externalId -> Optional.of(new TestUser("local-1", externalId)),
 				TestUser::id,
-				_ -> Set.of("ROLE_USER"),
-				_ -> 3L,
+				user -> Set.of("ROLE_USER"),
+				user -> 3L,
 				CustomClaimEnricher.none(),
 				FIXED_CLOCK);
 	}
@@ -74,7 +74,7 @@ final class TokenExchangeServiceExchangeTest
 		void shouldExchangeUpstreamToken(final SuccessCase testCase)
 		{
 			final ExchangeResult result = service(testCase.configuration())
-					.exchange(TokenExchangeRequest.of(testCase.token(), FIXED_CLOCK.instant()));
+					.exchange(testCase.token(), FIXED_CLOCK.instant());
 
 			assertThat(result).isInstanceOf(ExchangeSuccess.class);
 			testCase.assertions().accept((ExchangeSuccess) result);
@@ -86,9 +86,9 @@ final class TokenExchangeServiceExchangeTest
 			final TokenExchangeConfiguration<TestUser> configuration = TokenExchangeConfiguration.of(
 					externalId -> Optional.of(new TestUser("local-1", externalId)),
 					TestUser::id,
-					_ -> Set.of("ROLE_USER"),
-					_ -> 3L,
-					(_, _) -> Map.of(
+					user -> Set.of("ROLE_USER"),
+					user -> 3L,
+					(user, upstreamToken) -> Map.of(
 							"sub", "attacker-subject",
 							"iss", "attacker-issuer",
 							"roles", List.of("ROLE_ATTACKER"),
@@ -97,8 +97,7 @@ final class TokenExchangeServiceExchangeTest
 					FIXED_CLOCK);
 
 			final ExchangeResult result = service(configuration)
-					.exchange(TokenExchangeRequest.of(HermesTestTokens.upstreamTokenWithSubject("external-1"),
-							FIXED_CLOCK.instant()));
+					.exchange(HermesTestTokens.upstreamTokenWithSubject("external-1"), FIXED_CLOCK.instant());
 
 			assertThat(result).isInstanceOf(ExchangeSuccess.class);
 			final Map<String, Object> claims = HermesTestTokens.parseInternalClaims(((ExchangeSuccess) result).token().token());
@@ -110,7 +109,7 @@ final class TokenExchangeServiceExchangeTest
 		}
 
 		@Test
-		void shouldOmitAudienceJtiAndUpstreamIssuerWhenDisabled()
+		void shouldOmitAudienceJtiAndUpstreamIssuerClaimsFromIssuedJwtWhenDisabled()
 		{
 			final TokenIssuancePolicy issuancePolicy = TokenIssuancePolicy.of("hermes",
 					Set.of(),
@@ -125,8 +124,7 @@ final class TokenExchangeServiceExchangeTest
 					issuancePolicy,
 					HermesTestTokens.INTERNAL_SECRET,
 					defaultConfiguration())
-					.exchange(TokenExchangeRequest.of(HermesTestTokens.upstreamTokenWithSubject("external-1"),
-							FIXED_CLOCK.instant()));
+					.exchange(HermesTestTokens.upstreamTokenWithSubject("external-1"), FIXED_CLOCK.instant());
 
 			assertThat(result).isInstanceOf(ExchangeSuccess.class);
 			final ExchangeSuccess success = (ExchangeSuccess) result;
@@ -152,9 +150,9 @@ final class TokenExchangeServiceExchangeTest
 							TokenExchangeConfiguration.of("email",
 									externalId -> Optional.of(new TestUser("local-alice", externalId)),
 									TestUser::id,
-									_ -> Set.of("ROLE_REPORTING"),
-									_ -> 11L,
-									(_, _) -> Map.of("department", "finance"),
+									user -> Set.of("ROLE_REPORTING"),
+									user -> 11L,
+									(user, upstreamToken) -> Map.of("department", "finance"),
 									FIXED_CLOCK),
 							success ->
 							{
@@ -176,7 +174,7 @@ final class TokenExchangeServiceExchangeTest
 		void shouldReturnFailure(final FailureCase testCase)
 		{
 			final ExchangeResult result = service(testCase.configuration())
-					.exchange(TokenExchangeRequest.of(testCase.token(), FIXED_CLOCK.instant()));
+					.exchange(testCase.token(), FIXED_CLOCK.instant());
 
 			assertThat(result).isInstanceOf(ExchangeFailure.class);
 			assertThat(((ExchangeFailure) result).reason()).isEqualTo(testCase.expectedReason());
@@ -190,8 +188,7 @@ final class TokenExchangeServiceExchangeTest
 					TokenIssuancePolicy.of("hermes", Set.of("internal-api"), Duration.ofMinutes(30)),
 					"short-secret",
 					defaultConfiguration())
-					.exchange(TokenExchangeRequest.of(HermesTestTokens.upstreamTokenWithSubject("external-1"),
-							FIXED_CLOCK.instant()));
+					.exchange(HermesTestTokens.upstreamTokenWithSubject("external-1"), FIXED_CLOCK.instant());
 
 			assertThat(result).isInstanceOf(ExchangeFailure.class);
 			assertThat(((ExchangeFailure) result).reason()).isEqualTo(ExchangeFailureReason.ISSUANCE_FAILED);
@@ -200,7 +197,7 @@ final class TokenExchangeServiceExchangeTest
 		@Test
 		void shouldPropagateVerifierExceptions()
 		{
-			final TokenVerifier explodingVerifier = _ ->
+			final TokenVerifier explodingVerifier = token ->
 			{
 				throw new IllegalStateException("verifier exploded");
 			};
@@ -209,7 +206,7 @@ final class TokenExchangeServiceExchangeTest
 						TokenIssuancePolicy.of("hermes", Set.of("internal-api"), Duration.ofMinutes(30)),
 						HermesTestTokens.INTERNAL_SECRET,
 						defaultConfiguration())
-						.exchange(TokenExchangeRequest.of("irrelevant", FIXED_CLOCK.instant())))
+					.exchange("irrelevant", FIXED_CLOCK.instant()))
 					.isInstanceOf(IllegalStateException.class)
 					.hasMessage("verifier exploded");
 		}
@@ -226,8 +223,8 @@ final class TokenExchangeServiceExchangeTest
 							TokenExchangeConfiguration.of("email",
 									externalId -> Optional.of(new TestUser("local", externalId)),
 									TestUser::id,
-									_ -> Set.of(),
-									_ -> 1L,
+									user -> Set.of(),
+									user -> 1L,
 									CustomClaimEnricher.none(),
 									FIXED_CLOCK),
 							ExchangeFailureReason.MISSING_EXTERNAL_IDENTITY),
@@ -235,8 +232,8 @@ final class TokenExchangeServiceExchangeTest
 							HermesTestTokens.upstreamTokenWithSubject("provider-subject"),
 							TokenExchangeConfiguration.of(externalId -> Optional.of(new TestUser("", externalId)),
 									TestUser::id,
-									_ -> Set.of(),
-									_ -> 1L,
+									user -> Set.of(),
+									user -> 1L,
 									CustomClaimEnricher.none(),
 									FIXED_CLOCK),
 							ExchangeFailureReason.MISSING_LOCAL_SUBJECT))

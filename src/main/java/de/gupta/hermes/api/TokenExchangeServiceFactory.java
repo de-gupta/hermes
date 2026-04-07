@@ -2,6 +2,7 @@ package de.gupta.hermes.api;
 
 import de.gupta.commons.security.api.TokenVerificationPolicy;
 import de.gupta.commons.security.api.TokenVerifier;
+import de.gupta.hermes.api.hmac.HmacTokenExchangeServiceFactory;
 
 public final class TokenExchangeServiceFactory
 {

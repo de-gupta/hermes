@@ -1,5 +1,6 @@
 package de.gupta.hermes.domain.model;
 
+import java.util.Objects;
 import java.util.Optional;
 
 public record ExchangeFailure(ExchangeFailureReason reason, Optional<String> details) implements ExchangeResult
@@ -11,6 +12,6 @@ public record ExchangeFailure(ExchangeFailureReason reason, Optional<String> det
 
 	public static ExchangeFailure of(final ExchangeFailureReason reason, final String details)
 	{
-		return new ExchangeFailure(reason, Optional.ofNullable(details));
+		return new ExchangeFailure(reason, Optional.of(Objects.requireNonNull(details, "details must not be null")));
 	}
 }

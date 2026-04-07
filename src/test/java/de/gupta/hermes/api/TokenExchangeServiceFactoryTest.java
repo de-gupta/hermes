@@ -78,6 +78,28 @@ final class TokenExchangeServiceFactoryTest
 		assertThat(((ExchangeFailure) result).reason()).isEqualTo(ExchangeFailureReason.USER_NOT_FOUND);
 	}
 
+	@Test
+	void shouldRejectBlankExternalTokenAtControllerBoundary()
+	{
+		final TokenExchangeService service = TokenExchangeServiceFactory.hmac(
+				TokenVerificationPolicy.of(Duration.ZERO, true),
+				HermesTestTokens.UPSTREAM_SECRET,
+				TokenIssuancePolicy.of("Hermes", Set.of(), Duration.ofMinutes(30)),
+				HermesTestTokens.INTERNAL_SECRET,
+				TokenExchangeConfiguration.of(externalId -> Optional.of(new TestUser("local-42", externalId)),
+						TestUser::id,
+						_ -> Set.of(),
+						_ -> 1L,
+						CustomClaimEnricher.none(),
+						FIXED_CLOCK));
+
+		final ExchangeResult result = service.exchange(" ");
+
+		assertThat(result).isInstanceOf(ExchangeFailure.class);
+		assertThat(((ExchangeFailure) result).reason()).isEqualTo(ExchangeFailureReason.UPSTREAM_VERIFICATION_FAILED);
+		assertThat(((ExchangeFailure) result).details()).contains("externalToken must not be blank");
+	}
+
 	private record TestUser(String id, String externalId)
 	{
 	}
