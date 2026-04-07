@@ -15,7 +15,7 @@
 
         <aletheia.version>0.4.1</aletheia.version>
         <athena.version>0.4.0</athena.version>
-        <themis.version>1.0.0</themis.version>
+        <themis.version>1.0.1</themis.version>
 
         <junit.jupiter.version>5.13.1</junit.jupiter.version>
         <assertj.core.version>3.27.3</assertj.core.version>
@@ -31,6 +31,24 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.13.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.13.0</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.13.0</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.github.de-gupta</groupId>
             <artifactId>aletheia</artifactId>
             <version>${aletheia.version}</version>
@@ -39,6 +57,11 @@
             <groupId>io.github.de-gupta</groupId>
             <artifactId>athena</artifactId>
             <version>${athena.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.de-gupta</groupId>
+            <artifactId>themis</artifactId>
+            <version>${themis.version}</version>
         </dependency>
 
         <dependency>
