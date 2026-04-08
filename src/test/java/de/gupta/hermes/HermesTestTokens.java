@@ -14,6 +14,7 @@ import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.ECGenParameterSpec;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -77,28 +78,29 @@ public final class HermesTestTokens
 		return buildUpstreamToken(subject, subject + "@example.com", UPSTREAM_EC_PRIVATE_KEY);
 	}
 
-	public static Map<String, Object> parseInternalClaims(final String token)
+	public static Map<String, Object> parseInternalClaims(final String token, final Clock clock)
 	{
-		return parseInternalHmacClaims(token);
+		return parseInternalHmacClaims(token, clock);
 	}
 
-	public static Map<String, Object> parseInternalHmacClaims(final String token)
+	public static Map<String, Object> parseInternalHmacClaims(final String token, final Clock clock)
 	{
 		return Jwts.parser()
+		           .clock(() -> Date.from(clock.instant()))
 		           .verifyWith(hmacKey(INTERNAL_SECRET))
 		           .build()
 		           .parseSignedClaims(token)
 		           .getPayload();
 	}
 
-	public static Map<String, Object> parseInternalRsaClaims(final String token)
+	public static Map<String, Object> parseInternalRsaClaims(final String token, final Clock clock)
 	{
-		return parseSignedClaims(token, INTERNAL_RSA_PUBLIC_KEY);
+		return parseSignedClaims(token, INTERNAL_RSA_PUBLIC_KEY, clock);
 	}
 
-	public static Map<String, Object> parseInternalEcClaims(final String token)
+	public static Map<String, Object> parseInternalEcClaims(final String token, final Clock clock)
 	{
-		return parseSignedClaims(token, INTERNAL_EC_PUBLIC_KEY);
+		return parseSignedClaims(token, INTERNAL_EC_PUBLIC_KEY, clock);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -132,9 +134,12 @@ public final class HermesTestTokens
 		           .compact();
 	}
 
-	private static Map<String, Object> parseSignedClaims(final String token, final PublicKey verificationKey)
+	private static Map<String, Object> parseSignedClaims(final String token,
+	                                                     final PublicKey verificationKey,
+	                                                     final Clock clock)
 	{
 		return Jwts.parser()
+		           .clock(() -> Date.from(clock.instant()))
 		           .verifyWith(verificationKey)
 		           .build()
 		           .parseSignedClaims(token)

@@ -103,7 +103,8 @@ final class TokenExchangeServiceExchangeTest
 					.exchange(HermesTestTokens.upstreamTokenWithSubject("external-1"), FIXED_CLOCK.instant());
 
 			assertThat(result).isInstanceOf(ExchangeSuccess.class);
-			final Map<String, Object> claims = HermesTestTokens.parseInternalClaims(((ExchangeSuccess) result).token().token());
+			final Map<String, Object> claims =
+					HermesTestTokens.parseInternalClaims(((ExchangeSuccess) result).token().token(), FIXED_CLOCK);
 			assertThat(claims.get("sub")).isEqualTo("local-1");
 			assertThat(claims.get("iss")).isEqualTo("hermes");
 			assertThat(HermesTestTokens.rolesFromClaims(claims)).containsExactly("ROLE_USER");
@@ -133,7 +134,8 @@ final class TokenExchangeServiceExchangeTest
 			final ExchangeSuccess success = (ExchangeSuccess) result;
 			assertThat(success.token().tokenId()).isEmpty();
 			assertThat(success.token().upstreamIssuer()).contains("https://supabase.example");
-			final Map<String, Object> claims = HermesTestTokens.parseInternalClaims(success.token().token());
+			final Map<String, Object> claims =
+					HermesTestTokens.parseInternalClaims(success.token().token(), FIXED_CLOCK);
 			assertThat(claims).doesNotContainKeys("aud", "jti", "upstream_iss");
 		}
 
@@ -161,7 +163,8 @@ final class TokenExchangeServiceExchangeTest
 							{
 								assertThat(success.token().subject()).isEqualTo("local-alice");
 								assertThat(success.token().roles()).containsExactly("ROLE_REPORTING");
-								assertThat(HermesTestTokens.parseInternalClaims(success.token().token()).get("department"))
+								assertThat(HermesTestTokens.parseInternalClaims(success.token().token(), FIXED_CLOCK)
+								                           .get("department"))
 										.isEqualTo("finance");
 							}))
 			             .map(Arguments::of);
@@ -232,8 +235,8 @@ final class TokenExchangeServiceExchangeTest
 							HermesTestTokens.upstreamTokenWithSubject("provider-subject"),
 							TokenExchangeConfiguration.of(externalId -> Optional.of(new TestUser("", externalId)),
 									TestUser::id,
-									user -> Set.of(),
-									user -> 1L,
+									_ -> Set.of(),
+									_ -> 1L,
 									CustomClaimEnricher.none(),
 									FIXED_CLOCK),
 							ExchangeFailureReason.MISSING_LOCAL_SUBJECT))

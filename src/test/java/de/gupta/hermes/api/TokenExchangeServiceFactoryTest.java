@@ -47,7 +47,7 @@ final class TokenExchangeServiceFactoryTest
 		assertThat(success.token().upstreamIssuer()).contains("https://supabase.example");
 		assertThat(success.token().tokenId()).isPresent();
 
-		final Map<String, Object> claims = variant.claimsParser().apply(success.token().token());
+		final Map<String, Object> claims = variant.claimsParser().apply(success.token().token(), FIXED_CLOCK);
 		assertThat(claims.get("sub")).isEqualTo("local-42");
 		assertThat(claims.get("iss")).isEqualTo("Hermes");
 		assertThat(HermesTestTokens.rolesFromClaims(claims)).containsExactly("ROLE_ADMIN", "ROLE_USER");
@@ -176,10 +176,16 @@ final class TokenExchangeServiceFactoryTest
 				FIXED_CLOCK);
 	}
 
+	@FunctionalInterface
+	private interface BiClaimsParser
+	{
+		Map<String, Object> apply(String token, Clock clock);
+	}
+
 	private record SigningVariant(String description,
 	                              Function<TokenExchangeConfiguration<TestUser>, TokenExchangeService> serviceFactory,
 	                              String upstreamToken,
-	                              Function<String, Map<String, Object>> claimsParser)
+	                              BiClaimsParser claimsParser)
 	{
 		@Override
 		public String toString()
@@ -190,7 +196,7 @@ final class TokenExchangeServiceFactoryTest
 		private static SigningVariant of(final String description,
 		                                 final Function<TokenExchangeConfiguration<TestUser>, TokenExchangeService> serviceFactory,
 		                                 final String upstreamToken,
-		                                 final Function<String, Map<String, Object>> claimsParser)
+		                                 final BiClaimsParser claimsParser)
 		{
 			return new SigningVariant(description, serviceFactory, upstreamToken, claimsParser);
 		}
