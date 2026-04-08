@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>de.gupta</groupId>
-    <artifactId>hermes</artifactId>
+    <artifactId>security.hermes</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
     <properties>
@@ -79,9 +79,9 @@
     </dependencies>
 
     <scm>
-        <connection>scm:git:ssh://git@github.com/de-gupta/hermes.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/de-gupta/hermes.git</developerConnection>
-        <url>https://github.com/de-gupta/hermes.git</url>
+        <connection>scm:git:ssh://git@github.com/de-gupta/security.hermes.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/de-gupta/security.hermes.git</developerConnection>
+        <url>https://github.com/de-gupta/security.hermes.git</url>
         <tag>HEAD</tag>
     </scm>
 

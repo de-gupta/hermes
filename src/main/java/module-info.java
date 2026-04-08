@@ -1,4 +1,4 @@
-module hermes
+module de.gupta.security.hermes
 {
 	exports de.gupta.security.hermes.api;
 	exports de.gupta.security.hermes.domain.model;
