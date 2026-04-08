@@ -13,7 +13,7 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <aletheia.version>0.4.1</aletheia.version>
+        <aletheia.version>0.4.2</aletheia.version>
         <athena.version>0.4.0</athena.version>
         <themis.version>2.0.0</themis.version>
 

@@ -1,87 +1,88 @@
 package de.gupta.security.hermes.application.service;
 
+import de.gupta.aletheia.functional.Unfolding;
 import de.gupta.commons.utility.string.StringSanitizationUtility;
 import de.gupta.security.hermes.api.TokenExchangeConfiguration;
 import de.gupta.security.hermes.api.TokenIssuancePolicy;
-import de.gupta.security.hermes.domain.model.*;
+import de.gupta.security.hermes.domain.model.ExchangeFailure;
+import de.gupta.security.hermes.domain.model.ExchangeFailureReason;
+import de.gupta.security.hermes.domain.model.ExchangeResult;
 import de.gupta.security.themis.api.TokenVerifier;
 import de.gupta.security.themis.domain.model.NormalizedToken;
 import de.gupta.security.themis.domain.model.VerificationFailure;
-import de.gupta.security.themis.domain.model.VerificationResult;
 import de.gupta.security.themis.domain.model.VerificationSuccess;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
-import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.*;
+import java.util.Optional;
 
 final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExchangeService
 {
 	private final TokenVerifier upstreamTokenVerifier;
-	private final TokenIssuancePolicy issuancePolicy;
-	private final SecretKey issuerSigningKey;
 	private final TokenExchangeConfiguration<User> configuration;
+	private final InternalTokenMintingService<User> tokenMintingService;
 
 	static <User> InternalTokenExchangeService create(final TokenVerifier upstreamTokenVerifier,
 	                                                  final TokenIssuancePolicy issuancePolicy,
 	                                                  final String issuerSecret,
 	                                                  final TokenExchangeConfiguration<User> configuration)
 	{
-		return new InternalTokenExchangeServiceImpl<>(Objects.requireNonNull(upstreamTokenVerifier,
-				"upstreamTokenVerifier must not be null"),
-				Objects.requireNonNull(issuancePolicy, "issuancePolicy must not be null"),
-				Keys.hmacShaKeyFor(Objects.requireNonNull(issuerSecret, "issuerSecret must not be null")
-				                          .getBytes(StandardCharsets.UTF_8)),
-				Objects.requireNonNull(configuration, "configuration must not be null"));
+		return new InternalTokenExchangeServiceImpl<>(
+				upstreamTokenVerifier, configuration,
+				InternalTokenMintingService.create(issuancePolicy,
+						Keys.hmacShaKeyFor(issuerSecret.getBytes(StandardCharsets.UTF_8)), configuration));
 	}
 
 	@Override
 	public ExchangeResult exchange(final String externalToken, final Instant issuedAt)
 	{
-		final VerificationResult verificationResult = upstreamTokenVerifier.verify(externalToken);
-		if (verificationResult instanceof VerificationFailure failure)
-		{
-			return ExchangeFailure.of(ExchangeFailureReason.UPSTREAM_VERIFICATION_FAILED, failure.reason().name());
-		}
-
-		final NormalizedToken upstreamToken = ((VerificationSuccess) verificationResult).token();
-		final Optional<String> externalIdentity = resolveExternalIdentity(upstreamToken);
-		if (externalIdentity.isEmpty())
-		{
-			return ExchangeFailure.of(ExchangeFailureReason.MISSING_EXTERNAL_IDENTITY,
-					configuration.externalIdentityClaimName());
-		}
-
-		final Optional<User> user = resolveUser(externalIdentity.get());
-		if (user.isEmpty())
-		{
-			return ExchangeFailure.of(ExchangeFailureReason.USER_NOT_FOUND, externalIdentity.get());
-		}
-
-		final Optional<String> subject = resolveSubject(user.get());
-		if (subject.isEmpty())
-		{
-			return ExchangeFailure.of(ExchangeFailureReason.MISSING_LOCAL_SUBJECT);
-		}
-
-		return exchangeVerifiedUser(user.get(), subject.get(), upstreamToken, issuedAt);
+		return Unfolding.beckon(upstreamTokenVerifier.verify(externalToken))
+		                .coronate(result -> result instanceof VerificationFailure failure
+								? ExchangeFailure.of(ExchangeFailureReason.UPSTREAM_VERIFICATION_FAILED,
+								failure.reason().name())
+								: exchangeTrustedUpstreamToken(((VerificationSuccess) result).token(), issuedAt));
 	}
 
-	private ExchangeResult exchangeVerifiedUser(final User user,
-	                                            final String subject,
-	                                            final NormalizedToken upstreamToken,
-	                                            final Instant issuedAt)
+	private ExchangeResult exchangeTrustedUpstreamToken(final NormalizedToken upstreamToken, final Instant issuedAt)
 	{
-		final Set<String> roles = resolveRoles(user);
-		final long version = resolveVersion(user);
-		final Instant expiresAt = issuedAt.plus(issuancePolicy.timeToLive());
-		final Optional<String> tokenId = createTokenId();
-		final Map<String, Object> claims = buildClaims(user, upstreamToken, roles, version);
+		return Unfolding.augur(resolveExternalIdentity(upstreamToken))
+		                .metamorphose(externalIdentity -> new ExternalIdentityContext(upstreamToken, externalIdentity,
+								issuedAt))
+		                .metamorphose(this::exchangeWithExternalIdentity)
+		                .rescue(() -> ExchangeFailure.of(ExchangeFailureReason.MISSING_EXTERNAL_IDENTITY,
+								configuration.externalIdentityClaimName()));
+	}
 
-		return issueToken(subject, roles, version, issuedAt, expiresAt, tokenId, claims, upstreamToken);
+	private ExchangeResult exchangeWithExternalIdentity(final ExternalIdentityContext externalIdentityContext)
+	{
+		return Unfolding.augur(resolveUser(externalIdentityContext.externalIdentity()))
+		                .metamorphose(user -> new LocalUserContext<>(externalIdentityContext.upstreamToken(),
+								externalIdentityContext.externalIdentity(),
+								user,
+								externalIdentityContext.issuedAt()))
+		                .metamorphose(this::exchangeWithLocalUser)
+		                .rescue(() -> ExchangeFailure.of(ExchangeFailureReason.USER_NOT_FOUND,
+								externalIdentityContext.externalIdentity()));
+	}
+
+	private ExchangeResult exchangeWithLocalUser(final LocalUserContext<User> localUserContext)
+	{
+		return Unfolding.augur(resolveLocalSubject(localUserContext.user()))
+		                .metamorphose(localSubject -> new LocalSubjectContext<>(localUserContext.upstreamToken(),
+								localUserContext.user(),
+								localSubject,
+								localUserContext.issuedAt()))
+		                .metamorphose(this::mintInternalToken)
+		                .rescue(() -> ExchangeFailure.of(ExchangeFailureReason.MISSING_LOCAL_SUBJECT));
+	}
+
+	private ExchangeResult mintInternalToken(final LocalSubjectContext<User> localSubjectContext)
+	{
+		return tokenMintingService.mint(localSubjectContext.user(),
+				localSubjectContext.localSubject(),
+				localSubjectContext.upstreamToken(),
+				localSubjectContext.issuedAt());
 	}
 
 	private Optional<String> resolveExternalIdentity(final NormalizedToken upstreamToken)
@@ -98,94 +99,30 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 		return configuration.userResolver().resolveUser(externalIdentity);
 	}
 
-	private Optional<String> resolveSubject(final User user)
+	private Optional<String> resolveLocalSubject(final User user)
 	{
 		return Optional.ofNullable(configuration.localSubjectResolver().resolveSubject(user))
 		               .filter(StringSanitizationUtility::isNotBlank);
 	}
 
-	private Set<String> resolveRoles(final User user)
-	{
-		return new HashSet<>(configuration.roleResolver().fetchRoles(user));
-	}
-
-	private long resolveVersion(final User user)
-	{
-		return configuration.tokenVersionResolver().resolveVersion(user);
-	}
-
-	private Optional<String> createTokenId()
-	{
-		return issuancePolicy.includeTokenId()
-				? Optional.of(UUID.randomUUID().toString())
-				: Optional.empty();
-	}
-
-	private Map<String, Object> buildClaims(final User user,
-	                                        final NormalizedToken upstreamToken,
-	                                        final Set<String> roles,
-	                                        final long version)
-	{
-		final Map<String, Object> claims = new LinkedHashMap<>();
-		claims.putAll(configuration.customClaimEnricher().enrich(user, upstreamToken));
-		claims.put(issuancePolicy.roleClaimName(), roles.stream().sorted().toList());
-		claims.put(issuancePolicy.versionClaimName(), version);
-		issuancePolicy.upstreamIssuerClaimName()
-		              .flatMap(claimName -> upstreamToken.issuer().map(issuer -> Map.entry(claimName, issuer)))
-		              .ifPresent(entry -> claims.put(entry.getKey(), entry.getValue()));
-		return claims;
-	}
-
-	private ExchangeResult issueToken(final String subject,
-	                                  final Set<String> roles,
-	                                  final long version,
-	                                  final Instant issuedAt,
-	                                  final Instant expiresAt,
-	                                  final Optional<String> tokenId,
-	                                  final Map<String, Object> claims,
-	                                  final NormalizedToken upstreamToken)
-	{
-		try
-		{
-			final var builder = Jwts.builder()
-			                        .claims(claims)
-			                        .subject(subject)
-			                        .issuer(issuancePolicy.issuer())
-			                        .issuedAt(Date.from(issuedAt))
-			                        .expiration(Date.from(expiresAt))
-			                        .signWith(issuerSigningKey);
-
-			if (!issuancePolicy.audiences().isEmpty())
-			{
-				builder.audience().add(issuancePolicy.audiences()).and();
-			}
-			tokenId.ifPresent(builder::id);
-
-			return ExchangeSuccess.of(IssuedToken.of(builder.compact(),
-					subject,
-					issuancePolicy.issuer(),
-					issuancePolicy.audiences(),
-					issuedAt,
-					expiresAt,
-					roles,
-					version,
-					tokenId,
-					upstreamToken.issuer()));
-		}
-		catch (JwtException exception)
-		{
-			return ExchangeFailure.of(ExchangeFailureReason.ISSUANCE_FAILED, exception.getMessage());
-		}
-	}
-
 	private InternalTokenExchangeServiceImpl(final TokenVerifier upstreamTokenVerifier,
-	                                         final TokenIssuancePolicy issuancePolicy,
-	                                         final SecretKey issuerSigningKey,
-	                                         final TokenExchangeConfiguration<User> configuration)
+	                                         final TokenExchangeConfiguration<User> configuration,
+	                                         final InternalTokenMintingService<User> tokenMintingService)
 	{
 		this.upstreamTokenVerifier = upstreamTokenVerifier;
-		this.issuancePolicy = issuancePolicy;
-		this.issuerSigningKey = issuerSigningKey;
 		this.configuration = configuration;
+		this.tokenMintingService = tokenMintingService;
+	}
+
+	private record ExternalIdentityContext(NormalizedToken upstreamToken, String externalIdentity, Instant issuedAt)
+	{
+	}
+
+	private record LocalUserContext<T>(NormalizedToken upstreamToken, String externalIdentity, T user, Instant issuedAt)
+	{
+	}
+
+	private record LocalSubjectContext<T>(NormalizedToken upstreamToken, T user, String localSubject, Instant issuedAt)
+	{
 	}
 }
