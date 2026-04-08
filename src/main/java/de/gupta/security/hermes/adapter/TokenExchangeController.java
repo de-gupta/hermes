@@ -1,4 +1,4 @@
-package de.gupta.security.hermes.controller;
+package de.gupta.security.hermes.adapter;
 
 import de.gupta.security.hermes.domain.model.ExchangeResult;
 

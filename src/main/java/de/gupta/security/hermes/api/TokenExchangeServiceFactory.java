@@ -1,9 +1,9 @@
 package de.gupta.security.hermes.api;
 
+import de.gupta.security.hermes.adapter.TokenExchangeController;
+import de.gupta.security.hermes.adapter.TokenExchangeControllerFactory;
 import de.gupta.security.hermes.adapter.TokenExchangeServiceFacadeFactory;
 import de.gupta.security.hermes.application.service.InternalTokenExchangeServiceFactory;
-import de.gupta.security.hermes.controller.TokenExchangeController;
-import de.gupta.security.hermes.controller.TokenExchangeControllerFactory;
 import de.gupta.security.themis.api.TokenVerificationPolicy;
 import de.gupta.security.themis.api.TokenVerifier;
 import de.gupta.security.themis.api.TokenVerifierFactory;

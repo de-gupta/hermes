@@ -2,9 +2,11 @@ package de.gupta.security.hermes.api;
 
 import de.gupta.aletheia.functional.Unfolding;
 import de.gupta.commons.utility.string.StringSanitizationUtility;
+import de.gupta.security.themis.domain.model.NormalizedToken;
 
 import java.time.Clock;
 import java.util.Objects;
+import java.util.Optional;
 
 public record TokenExchangeConfiguration<User>(String externalIdentityClaimName,
                                                UserResolver<String, User> userResolver,
@@ -14,6 +16,13 @@ public record TokenExchangeConfiguration<User>(String externalIdentityClaimName,
                                                CustomClaimEnricher<User> customClaimEnricher,
                                                Clock clock)
 {
+	public Optional<String> resolveExternalIdentity(final NormalizedToken upstreamToken)
+	{
+		return "sub".equals(externalIdentityClaimName)
+				? Optional.ofNullable(upstreamToken.subject())
+				: upstreamToken.stringClaim(externalIdentityClaimName);
+	}
+
 	public static <User> TokenExchangeConfiguration<User> of(final String externalIdentityClaimName,
 	                                                         final UserResolver<String, User> userResolver,
 	                                                         final LocalSubjectResolver<User> localSubjectResolver,

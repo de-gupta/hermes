@@ -1,6 +1,4 @@
-package de.gupta.security.hermes.controller;
-
-import de.gupta.security.hermes.adapter.TokenExchangeServiceFacade;
+package de.gupta.security.hermes.adapter;
 
 public final class TokenExchangeControllerFactory
 {

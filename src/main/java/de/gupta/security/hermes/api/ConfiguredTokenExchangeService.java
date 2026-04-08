@@ -1,6 +1,6 @@
 package de.gupta.security.hermes.api;
 
-import de.gupta.security.hermes.controller.TokenExchangeController;
+import de.gupta.security.hermes.adapter.TokenExchangeController;
 import de.gupta.security.hermes.domain.model.ExchangeResult;
 
 final class ConfiguredTokenExchangeService implements TokenExchangeService

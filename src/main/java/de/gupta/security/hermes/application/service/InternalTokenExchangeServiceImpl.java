@@ -45,7 +45,7 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 
 	private ExchangeResult exchangeTrustedUpstreamToken(final NormalizedToken upstreamToken, final Instant issuedAt)
 	{
-		return Unfolding.augur(resolveExternalIdentity(upstreamToken))
+		return Unfolding.augur(configuration.resolveExternalIdentity(upstreamToken))
 		                .metamorphose(externalIdentity -> new ExternalIdentityContext(upstreamToken, externalIdentity,
 								issuedAt))
 		                .metamorphose(this::exchangeWithExternalIdentity)
@@ -82,15 +82,6 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 				localSubjectContext.localSubject(),
 				localSubjectContext.upstreamToken(),
 				localSubjectContext.issuedAt());
-	}
-
-	private Optional<String> resolveExternalIdentity(final NormalizedToken upstreamToken)
-	{
-		if ("sub".equals(configuration.externalIdentityClaimName()))
-		{
-			return Optional.ofNullable(upstreamToken.subject());
-		}
-		return upstreamToken.stringClaim(configuration.externalIdentityClaimName());
 	}
 
 	private Optional<User> resolveUser(final String externalIdentity)
