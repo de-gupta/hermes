@@ -5,7 +5,7 @@ module de.gupta.security.hermes
 
 	requires jjwt.api;
 
-	requires de.gupta.themis;
+	requires de.gupta.security.themis;
 	requires de.gupta.aletheia;
 	requires de.gupta.athena;
 }
