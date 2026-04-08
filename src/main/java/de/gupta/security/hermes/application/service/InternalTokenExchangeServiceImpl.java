@@ -13,6 +13,7 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
+import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
@@ -21,7 +22,7 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 {
 	private final TokenVerifier upstreamTokenVerifier;
 	private final TokenIssuancePolicy issuancePolicy;
-	private final byte[] issuerSecret;
+	private final SecretKey issuerSigningKey;
 	private final TokenExchangeConfiguration<User> configuration;
 
 	static <User> InternalTokenExchangeService create(final TokenVerifier upstreamTokenVerifier,
@@ -32,8 +33,8 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 		return new InternalTokenExchangeServiceImpl<>(Objects.requireNonNull(upstreamTokenVerifier,
 				"upstreamTokenVerifier must not be null"),
 				Objects.requireNonNull(issuancePolicy, "issuancePolicy must not be null"),
-				Objects.requireNonNull(issuerSecret, "issuerSecret must not be null")
-				       .getBytes(StandardCharsets.UTF_8),
+				Keys.hmacShaKeyFor(Objects.requireNonNull(issuerSecret, "issuerSecret must not be null")
+				                          .getBytes(StandardCharsets.UTF_8)),
 				Objects.requireNonNull(configuration, "configuration must not be null"));
 	}
 
@@ -105,7 +106,7 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 
 	private Set<String> resolveRoles(final User user)
 	{
-		return new LinkedHashSet<>(configuration.roleResolver().fetchRoles(user));
+		return new HashSet<>(configuration.roleResolver().fetchRoles(user));
 	}
 
 	private long resolveVersion(final User user)
@@ -127,7 +128,7 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 	{
 		final Map<String, Object> claims = new LinkedHashMap<>();
 		claims.putAll(configuration.customClaimEnricher().enrich(user, upstreamToken));
-		claims.put(issuancePolicy.roleClaimName(), List.copyOf(roles));
+		claims.put(issuancePolicy.roleClaimName(), roles.stream().sorted().toList());
 		claims.put(issuancePolicy.versionClaimName(), version);
 		issuancePolicy.upstreamIssuerClaimName()
 		              .flatMap(claimName -> upstreamToken.issuer().map(issuer -> Map.entry(claimName, issuer)))
@@ -152,7 +153,7 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 			                        .issuer(issuancePolicy.issuer())
 			                        .issuedAt(Date.from(issuedAt))
 			                        .expiration(Date.from(expiresAt))
-			                        .signWith(Keys.hmacShaKeyFor(issuerSecret));
+			                        .signWith(issuerSigningKey);
 
 			if (!issuancePolicy.audiences().isEmpty())
 			{
@@ -179,12 +180,12 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 
 	private InternalTokenExchangeServiceImpl(final TokenVerifier upstreamTokenVerifier,
 	                                         final TokenIssuancePolicy issuancePolicy,
-	                                         final byte[] issuerSecret,
+	                                         final SecretKey issuerSigningKey,
 	                                         final TokenExchangeConfiguration<User> configuration)
 	{
 		this.upstreamTokenVerifier = upstreamTokenVerifier;
 		this.issuancePolicy = issuancePolicy;
-		this.issuerSecret = issuerSecret;
+		this.issuerSigningKey = issuerSigningKey;
 		this.configuration = configuration;
 	}
 }

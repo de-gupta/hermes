@@ -13,6 +13,7 @@ import de.gupta.security.hermes.domain.model.ExchangeSuccess;
 import de.gupta.security.themis.api.TokenVerificationPolicy;
 import de.gupta.security.themis.api.TokenVerifier;
 import de.gupta.security.themis.api.TokenVerifierFactory;
+import io.jsonwebtoken.security.WeakKeyException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -61,8 +62,8 @@ final class TokenExchangeServiceExchangeTest
 	{
 		return TokenExchangeConfiguration.of(externalId -> Optional.of(new TestUser("local-1", externalId)),
 				TestUser::id,
-				user -> Set.of("ROLE_USER"),
-				user -> 3L,
+				_ -> Set.of("ROLE_USER"),
+				_ -> 3L,
 				CustomClaimEnricher.none(),
 				FIXED_CLOCK);
 	}
@@ -88,9 +89,9 @@ final class TokenExchangeServiceExchangeTest
 			final TokenExchangeConfiguration<TestUser> configuration = TokenExchangeConfiguration.of(
 					externalId -> Optional.of(new TestUser("local-1", externalId)),
 					TestUser::id,
-					user -> Set.of("ROLE_USER"),
-					user -> 3L,
-					(user, upstreamToken) -> Map.of(
+					_ -> Set.of("ROLE_USER"),
+					_ -> 3L,
+					(_, _) -> Map.of(
 							"sub", "attacker-subject",
 							"iss", "attacker-issuer",
 							"roles", List.of("ROLE_ATTACKER"),
@@ -152,9 +153,9 @@ final class TokenExchangeServiceExchangeTest
 							TokenExchangeConfiguration.of("email",
 									externalId -> Optional.of(new TestUser("local-alice", externalId)),
 									TestUser::id,
-									user -> Set.of("ROLE_REPORTING"),
-									user -> 11L,
-									(user, upstreamToken) -> Map.of("department", "finance"),
+									_ -> Set.of("ROLE_REPORTING"),
+									_ -> 11L,
+									(_, _) -> Map.of("department", "finance"),
 									FIXED_CLOCK),
 							success ->
 							{
@@ -183,23 +184,20 @@ final class TokenExchangeServiceExchangeTest
 		}
 
 		@Test
-		void shouldReturnIssuanceFailedForInvalidInternalSigningSecret()
+		void shouldRejectInvalidInternalSigningSecretDuringConstruction()
 		{
-			final ExchangeResult result = service(TokenVerifierFactory.hmac(
-						TokenVerificationPolicy.of(Duration.ZERO, true), HermesTestTokens.UPSTREAM_SECRET),
+			assertThatThrownBy(() -> service(TokenVerifierFactory.hmac(
+							TokenVerificationPolicy.of(Duration.ZERO, true), HermesTestTokens.UPSTREAM_SECRET),
 					TokenIssuancePolicy.of("hermes", Set.of("internal-api"), Duration.ofMinutes(30)),
 					"short-secret",
-					defaultConfiguration())
-					.exchange(HermesTestTokens.upstreamTokenWithSubject("external-1"), FIXED_CLOCK.instant());
-
-			assertThat(result).isInstanceOf(ExchangeFailure.class);
-			assertThat(((ExchangeFailure) result).reason()).isEqualTo(ExchangeFailureReason.ISSUANCE_FAILED);
+					defaultConfiguration()))
+					.isInstanceOf(WeakKeyException.class);
 		}
 
 		@Test
 		void shouldPropagateVerifierExceptions()
 		{
-			final TokenVerifier explodingVerifier = token ->
+			final TokenVerifier explodingVerifier = _ ->
 			{
 				throw new IllegalStateException("verifier exploded");
 			};
@@ -225,8 +223,8 @@ final class TokenExchangeServiceExchangeTest
 							TokenExchangeConfiguration.of("email",
 									externalId -> Optional.of(new TestUser("local", externalId)),
 									TestUser::id,
-									user -> Set.of(),
-									user -> 1L,
+									_ -> Set.of(),
+									_ -> 1L,
 									CustomClaimEnricher.none(),
 									FIXED_CLOCK),
 							ExchangeFailureReason.MISSING_EXTERNAL_IDENTITY),

@@ -52,7 +52,7 @@ final class TokenExchangeServiceFactoryTest
 		final Map<String, Object> claims = HermesTestTokens.parseInternalClaims(success.token().token());
 		assertThat(claims.get("sub")).isEqualTo("local-42");
 		assertThat(claims.get("iss")).isEqualTo("Hermes");
-		assertThat(HermesTestTokens.rolesFromClaims(claims)).containsExactlyInAnyOrder("ROLE_ADMIN", "ROLE_USER");
+		assertThat(HermesTestTokens.rolesFromClaims(claims)).containsExactly("ROLE_ADMIN", "ROLE_USER");
 		assertThat(claims.get("ver")).isEqualTo(7);
 		assertThat(claims.get("tenant")).isEqualTo("acme");
 		assertThat(claims.get("upstream_iss")).isEqualTo("https://supabase.example");
@@ -105,3 +105,4 @@ final class TokenExchangeServiceFactoryTest
 	{
 	}
 }
+

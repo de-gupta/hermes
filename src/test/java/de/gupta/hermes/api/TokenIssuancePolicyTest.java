@@ -4,7 +4,7 @@ import de.gupta.security.hermes.api.TokenIssuancePolicy;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -28,7 +28,7 @@ final class TokenIssuancePolicyTest
 	@Test
 	void shouldDefensivelyCopyAudiences()
 	{
-		final Set<String> audiences = new LinkedHashSet<>();
+		final Set<String> audiences = new HashSet<>();
 		audiences.add("internal-api");
 
 		final TokenIssuancePolicy policy = TokenIssuancePolicy.of("hermes", audiences, Duration.ofMinutes(30));

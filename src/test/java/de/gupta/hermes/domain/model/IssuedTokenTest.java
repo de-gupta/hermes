@@ -4,7 +4,7 @@ import de.gupta.security.hermes.domain.model.IssuedToken;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -16,8 +16,8 @@ final class IssuedTokenTest
 	@Test
 	void shouldDefensivelyCopyAudiencesAndRoles()
 	{
-		final Set<String> audiences = new LinkedHashSet<>(Set.of("internal-api"));
-		final Set<String> roles = new LinkedHashSet<>(Set.of("ROLE_USER"));
+		final Set<String> audiences = new HashSet<>(Set.of("internal-api"));
+		final Set<String> roles = new HashSet<>(Set.of("ROLE_USER"));
 
 		final IssuedToken issuedToken = IssuedToken.of("token-value",
 				"local-1",
