@@ -8,6 +8,10 @@
     <artifactId>security.hermes</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
+    <name>${artifactId}</name>
+    <description>A library for security</description>
+    <url>https://github.com/de-gupta/security.hermes.git</url>
+
     <properties>
         <java.version>25</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
