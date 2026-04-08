@@ -1,16 +1,15 @@
-package de.gupta.security.hermes.api.hmac;
+package de.gupta.security.hermes.api;
 
-import de.gupta.security.hermes.api.TokenExchangeService;
 import de.gupta.security.hermes.controller.TokenExchangeController;
 import de.gupta.security.hermes.domain.model.ExchangeResult;
 
-final class HmacTokenExchangeService implements TokenExchangeService
+final class ConfiguredTokenExchangeService implements TokenExchangeService
 {
 	private final TokenExchangeController controller;
 
 	static TokenExchangeService create(final TokenExchangeController controller)
 	{
-		return new HmacTokenExchangeService(controller);
+		return new ConfiguredTokenExchangeService(controller);
 	}
 
 	@Override
@@ -19,7 +18,7 @@ final class HmacTokenExchangeService implements TokenExchangeService
 		return controller.exchange(externalToken);
 	}
 
-	private HmacTokenExchangeService(final TokenExchangeController controller)
+	private ConfiguredTokenExchangeService(final TokenExchangeController controller)
 	{
 		this.controller = controller;
 	}

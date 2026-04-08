@@ -11,9 +11,8 @@ import de.gupta.security.themis.api.TokenVerifier;
 import de.gupta.security.themis.domain.model.NormalizedToken;
 import de.gupta.security.themis.domain.model.VerificationFailure;
 import de.gupta.security.themis.domain.model.VerificationSuccess;
-import io.jsonwebtoken.security.Keys;
 
-import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -25,13 +24,13 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 
 	static <User> InternalTokenExchangeService create(final TokenVerifier upstreamTokenVerifier,
 	                                                  final TokenIssuancePolicy issuancePolicy,
-	                                                  final String issuerSecret,
+	                                                  final Key issuerSigningKey,
 	                                                  final TokenExchangeConfiguration<User> configuration)
 	{
 		return new InternalTokenExchangeServiceImpl<>(
 				upstreamTokenVerifier, configuration,
 				InternalTokenMintingService.create(issuancePolicy,
-						Keys.hmacShaKeyFor(issuerSecret.getBytes(StandardCharsets.UTF_8)), configuration));
+						issuerSigningKey, configuration));
 	}
 
 	@Override

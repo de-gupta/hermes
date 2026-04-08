@@ -8,7 +8,7 @@ import de.gupta.security.themis.domain.model.NormalizedToken;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 
-import javax.crypto.SecretKey;
+import java.security.Key;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
@@ -16,11 +16,11 @@ import java.util.function.Function;
 final class InternalTokenMintingService<User>
 {
 	private final TokenIssuancePolicy issuancePolicy;
-	private final SecretKey issuerSigningKey;
+	private final Key issuerSigningKey;
 	private final TokenExchangeConfiguration<User> configuration;
 
 	static <User> InternalTokenMintingService<User> create(final TokenIssuancePolicy issuancePolicy,
-	                                                       final SecretKey issuerSigningKey,
+	                                                       final Key issuerSigningKey,
 	                                                       final TokenExchangeConfiguration<User> configuration)
 	{
 		return new InternalTokenMintingService<>(
@@ -152,7 +152,7 @@ final class InternalTokenMintingService<User>
 	}
 
 	private InternalTokenMintingService(final TokenIssuancePolicy issuancePolicy,
-	                                    final SecretKey issuerSigningKey,
+	                                    final Key issuerSigningKey,
 	                                    final TokenExchangeConfiguration<User> configuration)
 	{
 		this.issuancePolicy = issuancePolicy;

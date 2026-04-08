@@ -1,94 +1,58 @@
 # hermes
 
-Hermes is the token issuer and token exchange authority of the ecosystem.
+Hermes is the issuer and exchange authority for internal tokens.
 
-Its job is to accept an upstream identity proof that has been verified cryptographically, resolve that identity to a local user, enrich local claims such as roles and token version, and mint a new internal token that downstream services can trust and use.
+Its job is to accept a raw upstream token, verify that token through Themis, resolve the trusted upstream identity to a
+local user, enrich local claims such as roles and token version, and mint a new internal token that downstream services
+can trust.
 
-In the intended stack:
+Hermes is intentionally not:
 
-- `themis` verifies tokens cryptographically and normalizes trusted claims.
-- `hermes` exchanges trusted upstream identity into an internal token.
-- `augustus` checks whether a trusted token is still current in system state.
-- `argus` orchestrates the full authentication pipeline.
+- a full authentication framework
+- a user-management library
+- an authorization engine
+- a currentness or revocation checker
 
-Hermes is not a full authentication framework, authorization engine, or user-management library.
+## Philosophy
 
-## Current scope
+Hermes exists to keep token issuance and token exchange separate from the other security concerns in the ecosystem.
 
-The current initial implementation supports:
+- `themis` trusts tokens cryptographically
+- `hermes` mints and exchanges tokens
+- `augustus` checks whether trusted tokens are still current in system state
+- `argus` orchestrates the whole pipeline
 
-- raw upstream JWT input
-- internal verification of that upstream token via `themis`
-- configurable external identity claim extraction, defaulting to `sub`
-- local user resolution through a consumer-provided interface
-- local role resolution through a consumer-provided interface
-- token version resolution through a consumer-provided interface
-- custom claim enrichment through a consumer-provided interface
-- HMAC signing for the issued internal token
-- explicit success and failure result types for exchange
+That separation matters.
 
-The current implementation does not yet include:
+- Trusting a token is not the same as issuing a token.
+- Issuing a token is not the same as deciding whether it is still current.
+- Currentness is not the same as authorization.
+- Authentication should not collapse crypto, DB state, issuance, and framework glue into one unstable abstraction.
 
-- RSA or EC signing for issued internal tokens
-- a separate direct `TokenIssuer` API for already-trusted local identities
-- Spring Boot starter or auto-configuration
-- built-in persistence adapters
-- refresh-token, login, registration, or MFA flows
-- currentness validation after issuance
+Hermes therefore focuses on one narrow responsibility:
 
-## Public API
+- take a trusted upstream identity
+- translate it into a local/internal identity
+- enrich the claims that belong in the internal token
+- issue the internal token
 
-The intended public entrypoint is:
+## What Consumers Provide
 
-- `de.gupta.hermes.api.TokenExchangeServiceFactory`
+Hermes is framework-agnostic and deliberately does not know your user model, database schema, or IdP-specific domain
+model.
 
-The main public configuration/value types are:
+Consumers provide:
 
-- `de.gupta.hermes.api.TokenExchangeConfiguration`
-- `de.gupta.hermes.api.TokenIssuancePolicy`
-- `de.gupta.hermes.domain.model.ExchangeResult`
-- `de.gupta.hermes.domain.model.ExchangeSuccess`
-- `de.gupta.hermes.domain.model.ExchangeFailure`
-- `de.gupta.hermes.domain.model.IssuedToken`
-
-The main extension seams that consumers implement are:
-
-- `UserResolver<ExternalIdentity, User>`
-- `LocalSubjectResolver<User>`
-- `RoleResolver<User>`
-- `TokenVersionResolver<User>`
-- `CustomClaimEnricher<User>`
-
-## Exchange flow
-
-The exchange flow is:
-
-1. an upstream IdP token arrives
-2. Hermes calls a Themis verifier internally
-3. Hermes extracts the configured upstream identity claim
-4. Hermes resolves the local user
-5. Hermes resolves local roles
-6. Hermes resolves the token version
-7. Hermes enriches any custom claims
-8. Hermes issues a new signed internal token
-
-After that, downstream services should use the Hermes-issued internal token only.
-
-## What consumers need to provide
-
-Hermes is framework-agnostic and intentionally does not know your user model or database schema.
-
-Consumers must provide:
-
-- a way to verify the upstream token
+- an upstream-token verification strategy, either as a Themis verifier or as verification settings for the built-in
+  HMAC, RSA, or EC paths
 - a way to resolve an upstream identity to a local user
-- a way to derive the internal/local subject from that local user
-- a way to fetch roles for that local user
-- a way to fetch the current token version for that local user
+- a way to derive the local/internal subject from that user
+- a way to fetch the roles for that user
+- a way to fetch the token version for that user
 - optional custom claim enrichment
-- the secret used to sign internal HMAC tokens
+- the signing key material for the internal token that Hermes should mint
 
-Conceptually, those look like this:
+Conceptually, that looks like:
 
 ```java
 interface UserResolver<ExternalIdentity, User>
@@ -117,245 +81,166 @@ interface CustomClaimEnricher<User>
 }
 ```
 
-## Basic usage
+## What Consumers Get
 
-### 1. Define the issuance policy
+Consumers get:
+
+- a small exchange API that accepts a raw upstream token
+- internal upstream-token verification through Themis
+- configurable extraction of the upstream identity claim, defaulting to `sub`
+- explicit success and failure result types instead of exception-driven control flow for normal invalid cases
+- a newly minted internal JWT with local subject, version, roles, issuer, timing claims, and optional custom claims
+- support for HMAC, RSA, and EC signing of the internal token
+
+The current exchange result model distinguishes:
+
+- successful exchange with an issued token
+- upstream verification failure
+- missing external identity
+- unresolved local user
+- missing local subject
+- internal issuance failure
+
+## Public API
+
+The public API is intentionally small.
+
+Main entrypoint:
+
+- `TokenExchangeServiceFactory`
+
+Main service:
+
+- `TokenExchangeService`
+
+Main configuration/value types:
+
+- `TokenExchangeConfiguration`
+- `TokenIssuancePolicy`
+- `ExchangeResult`
+- `ExchangeSuccess`
+- `ExchangeFailure`
+- `ExchangeFailureReason`
+- `IssuedToken`
+
+Consumer extension seams:
+
+- `UserResolver`
+- `LocalSubjectResolver`
+- `RoleResolver`
+- `TokenVersionResolver`
+- `CustomClaimEnricher`
+
+## Usage
+
+The example below is intentionally shown without exact package imports so the README stays stable if package names move.
+The flow itself is complete.
 
 ```java
-TokenIssuancePolicy issuancePolicy = TokenIssuancePolicy.of(
-        "https://auth.my-company.internal",
-        Set.of("my-service"),
-        Duration.ofMinutes(30));
+import java.time.Clock;
+import java.time.Duration;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+record LocalUser(String id, String externalId, String tenantId)
+{
+}
+
+final class Example
+{
+  ExchangeResult exchange(final String upstreamToken)
+  {
+    TokenIssuancePolicy issuancePolicy = TokenIssuancePolicy.of(
+            "https://auth.internal.example",
+            Set.of("inventory-api"),
+            Duration.ofMinutes(30));
+
+    TokenExchangeConfiguration<LocalUser> configuration = TokenExchangeConfiguration.of(
+            "sub",
+            this::findLocalUser,
+            LocalUser::id,
+            user -> fetchRoleNames(user.id()),
+            user -> fetchTokenVersion(user.id()),
+            (user, trustedUpstreamToken) -> Map.of("tenant", user.tenantId()),
+            Clock.systemUTC());
+
+    TokenExchangeService exchangeService = TokenExchangeServiceFactory.rsa(
+            TokenVerificationPolicy.of(Duration.ofSeconds(30), true),
+            upstreamIssuerPublicKey(),
+            issuancePolicy,
+            internalIssuerPrivateKey(),
+            configuration);
+
+    return exchangeService.exchange(upstreamToken);
+  }
+
+  private Optional<LocalUser> findLocalUser(final String externalId)
+  {
+    return Optional.of(new LocalUser("local-42", externalId, "acme"));
+  }
+
+  private Set<String> fetchRoleNames(final String localUserId)
+  {
+    return Set.of("ROLE_ADMIN", "ROLE_REPORTING");
+  }
+
+  private long fetchTokenVersion(final String localUserId)
+  {
+    return 7L;
+  }
+
+  private RSAPublicKey upstreamIssuerPublicKey()
+  {
+    throw new UnsupportedOperationException("provide your upstream RSA public key");
+  }
+
+  private RSAPrivateKey internalIssuerPrivateKey()
+  {
+    throw new UnsupportedOperationException("provide your internal RSA private key");
+  }
+}
 ```
 
-By default this uses:
-
-- role claim name: `roles`
-- version claim name: `ver`
-- upstream issuer claim name: `upstream_iss`
-- token id generation: enabled
-
-### 2. Define the exchange configuration
+Typical handling looks like:
 
 ```java
-TokenExchangeConfiguration<LocalUser> configuration = TokenExchangeConfiguration.of(
-        "sub",
-        externalId -> userRepository.findByExternalId(externalId),
-        LocalUser::id,
-        user -> roleRepository.findRoleNamesByUserId(user.id()),
-        user -> tokenVersionRepository.findVersionByUserId(user.id()),
-        (user, upstreamToken) -> Map.of("tenant", user.tenantId()),
-        Clock.systemUTC());
-```
-
-If you omit the claim name, Hermes uses `sub` by default.
-
-### 3. Create the exchange service
-
-If Hermes should verify the upstream token internally with Themis using HMAC:
-
-```java
-TokenExchangeService exchangeService = TokenExchangeServiceFactory.hmac(
-        TokenVerificationPolicy.of(Duration.ofSeconds(30), true),
-        upstreamIssuerSecret,
-        issuancePolicy,
-        internalIssuerSecret,
-        configuration);
-```
-
-If you already have a Themis verifier:
-
-```java
-TokenVerifier upstreamVerifier = TokenVerifierFactory.hmac(
-        TokenVerificationPolicy.of(Duration.ofSeconds(30), true),
-        upstreamIssuerSecret);
-
-TokenExchangeService exchangeService = TokenExchangeServiceFactory.hmac(
-        upstreamVerifier,
-        issuancePolicy,
-        internalIssuerSecret,
-        configuration);
-```
-
-### 4. Exchange the token
-
-```java
-ExchangeResult result = exchangeService.exchange(externalToken);
+ExchangeResult result = exchangeService.exchange(upstreamToken);
 
 if (result instanceof ExchangeSuccess success)
 {
     String internalToken = success.token().token();
+String localSubject = success.token().subject();
 }
 else if (result instanceof ExchangeFailure failure)
 {
-    ExchangeFailureReason reason = failure.reason();
-}
-```
+        switch(failure.
 
-## Claim contract of the issued internal token
-
-The current implementation emits these claims:
-
-- `sub`: local/internal user id
-- `iss`: internal issuer
-- `aud`: configured audiences, if any
-- `iat`: issue timestamp
-- `exp`: expiry timestamp
-- `jti`: optional token id when enabled
-- `roles`: local roles by default, configurable claim name
-- `ver`: local token version by default, configurable claim name
-- `upstream_iss`: copied upstream issuer when present and enabled
-- any custom claims from `CustomClaimEnricher`
-
-Hermes intentionally overwrites reserved issuance claims like roles, version, and upstream issuer from its own authoritative data even if custom enrichment returns the same keys.
-
-## Failure model
-
-Hermes uses explicit result models instead of using exceptions for normal invalid cases.
-
-Current failure reasons are:
-
-- `UPSTREAM_VERIFICATION_FAILED`
-- `MISSING_EXTERNAL_IDENTITY`
-- `USER_NOT_FOUND`
-- `MISSING_LOCAL_SUBJECT`
-- `ISSUANCE_FAILED`
-
-Typical handling is:
-
-- map upstream verification failure to `401 Unauthorized`
-- map missing or unresolved user to `403 Forbidden` or `401 Unauthorized`, depending on your boundary
-- log unexpected issuance failures as server-side faults
-
-## Spring Boot integration example
-
-Hermes is framework-agnostic, but it fits naturally into Spring Boot as a set of beans that your controller or filter uses.
-
-### Example configuration
-
-```java
-@Configuration
-class HermesConfiguration
-{
-    @Bean
-    TokenExchangeService tokenExchangeService(UserRepository userRepository,
-                                              RoleRepository roleRepository,
-                                              TokenVersionRepository tokenVersionRepository,
-                                              HermesProperties properties)
-    {
-        TokenIssuancePolicy issuancePolicy = TokenIssuancePolicy.of(
-                properties.internalIssuer(),
-                Set.of(properties.internalAudience()),
-                Duration.ofMinutes(properties.internalTokenTtlMinutes()));
-
-        TokenExchangeConfiguration<LocalUser> configuration = TokenExchangeConfiguration.of(
-                properties.externalIdentityClaim(),
-                externalId -> userRepository.findByExternalId(externalId),
-                LocalUser::id,
-                user -> roleRepository.findRoleNamesByUserId(user.id()),
-                user -> tokenVersionRepository.findVersionByUserId(user.id()),
-                (user, upstreamToken) -> Map.of("tenant", user.tenantId()),
-                Clock.systemUTC());
-
-        return TokenExchangeServiceFactory.hmac(
-                TokenVerificationPolicy.of(Duration.ofSeconds(30), true),
-                properties.upstreamIssuerSecret(),
-                issuancePolicy,
-                properties.internalIssuerSecret(),
-                configuration);
-    }
-}
-```
-
-### Example controller
-
-```java
-@RestController
-@RequestMapping("/auth")
-class AuthController
-{
-    private final TokenExchangeService tokenExchangeService;
-
-    AuthController(TokenExchangeService tokenExchangeService)
-    {
-        this.tokenExchangeService = tokenExchangeService;
-    }
-
-    @PostMapping("/exchange")
-    ResponseEntity<?> exchange(@RequestBody ExchangeTokenRequest request)
-    {
-        ExchangeResult result = tokenExchangeService.exchange(request.token());
-
-        if (result instanceof ExchangeSuccess success)
+reason())
         {
-            return ResponseEntity.ok(Map.of(
-                    "token", success.token().token(),
-                    "subject", success.token().subject(),
-                    "expiresAt", success.token().expiresAt()));
+        case UPSTREAM_VERIFICATION_FAILED ->{
+        // reject the request
         }
-
-        ExchangeFailure failure = (ExchangeFailure) result;
-        return switch (failure.reason())
-        {
-            case UPSTREAM_VERIFICATION_FAILED, MISSING_EXTERNAL_IDENTITY, USER_NOT_FOUND, MISSING_LOCAL_SUBJECT ->
-                    ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("reason", failure.reason().name()));
-            case ISSUANCE_FAILED ->
-                    ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("reason", failure.reason().name()));
-        };
+        case MISSING_EXTERNAL_IDENTITY,USER_NOT_FOUND,MISSING_LOCAL_SUBJECT ->{
+        // reject the request
+        }
+        case ISSUANCE_FAILED ->{
+        // treat as server-side fault
+        }
     }
 }
 ```
 
-### Recommended Spring Boot responsibility split
+The issued internal token currently contains:
 
-In a Spring Boot app, a clean split is:
+- local subject
+- internal issuer
+- configured audience, if any
+- issue and expiry timestamps
+- roles
+- token version
+- optional token id
+- optional upstream issuer claim
+- custom claims from the consumer-provided enricher
 
-- controller or filter: accepts the upstream token and calls Hermes
-- repository beans: resolve local user, roles, and token version
-- Hermes: verifies upstream token and issues internal token
-- Themis in downstream services: verifies Hermes-issued internal token
-- Augustus later: checks token currentness against state
-
-Try to avoid putting database access or authorization rules directly into web filters. Let the Hermes configuration wire in those concerns via the resolver interfaces instead.
-
-## Testing
-
-The current test suite covers:
-
-- successful exchange from upstream token to internal token
-- configurable identity claim extraction
-- user-not-found failures
-- upstream verification failures
-- missing external identity failures
-- missing local subject failures
-- defaults and validation of public configuration types
-- defensive-copy behavior of public value types
-
-Run tests with:
-
-```bash
-mvn test
-```
-
-## Is this initial version feature complete?
-
-It is a reasonable first vertical slice, but not a complete `1.0` of Hermes yet.
-
-What is strong already:
-
-- the core exchange story exists end to end
-- the library boundaries are clean and aligned with Themis
-- the public API surface is still small
-- the extension seams are explicit and consumer-owned
-- the failure model is predictable and test-backed
-
-What still feels missing before calling it broadly feature complete:
-
-- asymmetric signing support for internal tokens
-- a direct issue API separate from exchange
-- more explicit token contract documentation around reserved custom-claim names
-- more negative tests around issuer/audience policy combinations and custom claim collisions
-- examples for common providers such as Supabase
-- eventual Spring Boot adapter or starter if ease-of-use becomes a goal
-
-So my view is: this is a good initial version and a good foundation, but not the full feature-complete Hermes vision yet.
+Hermes intentionally writes the canonical issuance claims itself even if custom enrichment returns the same keys.
