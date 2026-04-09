@@ -4,7 +4,7 @@
 
     <groupId>io.github.de-gupta</groupId>
     <artifactId>security.hermes</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1-SNAPSHOT</version>
 
     <name>${artifactId}</name>
     <description>A library for security</description>
@@ -84,7 +84,7 @@
         <connection>scm:git:ssh://git@github.com/de-gupta/security.hermes.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/de-gupta/security.hermes.git</developerConnection>
         <url>https://github.com/de-gupta/security.hermes.git</url>
-        <tag>v1.1.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <build>
