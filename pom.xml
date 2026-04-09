@@ -15,9 +15,9 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <aletheia.version>0.4.2</aletheia.version>
+        <aletheia.version>0.5.0</aletheia.version>
         <athena.version>0.4.0</athena.version>
-        <themis.version>2.1.0</themis.version>
+        <themis.version>2.2.0</themis.version>
 
         <junit.jupiter.version>5.13.1</junit.jupiter.version>
         <assertj.core.version>3.27.3</assertj.core.version>
