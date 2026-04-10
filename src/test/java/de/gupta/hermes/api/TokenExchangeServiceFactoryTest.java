@@ -6,6 +6,7 @@ import de.gupta.security.hermes.domain.model.ExchangeFailure;
 import de.gupta.security.hermes.domain.model.ExchangeFailureReason;
 import de.gupta.security.hermes.domain.model.ExchangeResult;
 import de.gupta.security.hermes.domain.model.ExchangeSuccess;
+import de.gupta.security.themis.api.TokenVerificationConfiguration;
 import de.gupta.security.themis.api.TokenVerificationPolicy;
 import de.gupta.security.themis.api.TokenVerifierFactory;
 import org.junit.jupiter.api.TestInstance;
@@ -86,7 +87,7 @@ final class TokenExchangeServiceFactoryTest
 		return Stream.of(
 							 SigningVariant.of("hmac via policy",
 									 configuration -> TokenExchangeServiceFactory.hmac(
-											 TokenVerificationPolicy.of(Duration.ZERO, true),
+											 TokenVerificationConfiguration.of(TokenVerificationPolicy.of(Duration.ZERO, true)),
 											 HermesTestTokens.UPSTREAM_SECRET,
 											 issuancePolicy(),
 											 HermesTestTokens.INTERNAL_SECRET,
@@ -95,7 +96,9 @@ final class TokenExchangeServiceFactoryTest
 									 HermesTestTokens::parseInternalHmacClaims),
 							 SigningVariant.of("hmac via verifier",
 									 configuration -> TokenExchangeServiceFactory.hmac(
-											 TokenVerifierFactory.hmac(TokenVerificationPolicy.of(Duration.ZERO, true),
+											 TokenVerifierFactory.hmac(
+													 TokenVerificationConfiguration.of(
+												             TokenVerificationPolicy.of(Duration.ZERO, true)),
 													 HermesTestTokens.UPSTREAM_SECRET),
 											 issuancePolicy(),
 											 HermesTestTokens.INTERNAL_SECRET,
@@ -104,7 +107,7 @@ final class TokenExchangeServiceFactoryTest
 									 HermesTestTokens::parseInternalHmacClaims),
 							 SigningVariant.of("rsa via policy",
 									 configuration -> TokenExchangeServiceFactory.rsa(
-											 TokenVerificationPolicy.of(Duration.ZERO, true),
+											 TokenVerificationConfiguration.of(TokenVerificationPolicy.of(Duration.ZERO, true)),
 											 HermesTestTokens.UPSTREAM_RSA_PUBLIC_KEY,
 											 issuancePolicy(),
 											 HermesTestTokens.INTERNAL_RSA_PRIVATE_KEY,
@@ -113,7 +116,9 @@ final class TokenExchangeServiceFactoryTest
 									 HermesTestTokens::parseInternalRsaClaims),
 							 SigningVariant.of("rsa via verifier",
 									 configuration -> TokenExchangeServiceFactory.rsa(
-											 TokenVerifierFactory.rsa(TokenVerificationPolicy.of(Duration.ZERO, true),
+											 TokenVerifierFactory.rsa(
+													 TokenVerificationConfiguration.of(
+												             TokenVerificationPolicy.of(Duration.ZERO, true)),
 													 HermesTestTokens.UPSTREAM_RSA_PUBLIC_KEY),
 											 issuancePolicy(),
 											 HermesTestTokens.INTERNAL_RSA_PRIVATE_KEY,
@@ -122,7 +127,7 @@ final class TokenExchangeServiceFactoryTest
 									 HermesTestTokens::parseInternalRsaClaims),
 							 SigningVariant.of("ec via policy",
 									 configuration -> TokenExchangeServiceFactory.ec(
-											 TokenVerificationPolicy.of(Duration.ZERO, true),
+											 TokenVerificationConfiguration.of(TokenVerificationPolicy.of(Duration.ZERO, true)),
 											 HermesTestTokens.UPSTREAM_EC_PUBLIC_KEY,
 											 issuancePolicy(),
 											 HermesTestTokens.INTERNAL_EC_PRIVATE_KEY,
@@ -131,7 +136,9 @@ final class TokenExchangeServiceFactoryTest
 									 HermesTestTokens::parseInternalEcClaims),
 							 SigningVariant.of("ec via verifier",
 									 configuration -> TokenExchangeServiceFactory.ec(
-											 TokenVerifierFactory.ec(TokenVerificationPolicy.of(Duration.ZERO, true),
+											 TokenVerifierFactory.ec(
+													 TokenVerificationConfiguration.of(
+												             TokenVerificationPolicy.of(Duration.ZERO, true)),
 													 HermesTestTokens.UPSTREAM_EC_PUBLIC_KEY),
 											 issuancePolicy(),
 											 HermesTestTokens.INTERNAL_EC_PRIVATE_KEY,

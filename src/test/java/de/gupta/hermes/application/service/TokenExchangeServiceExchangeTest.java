@@ -10,6 +10,7 @@ import de.gupta.security.hermes.domain.model.ExchangeFailure;
 import de.gupta.security.hermes.domain.model.ExchangeFailureReason;
 import de.gupta.security.hermes.domain.model.ExchangeResult;
 import de.gupta.security.hermes.domain.model.ExchangeSuccess;
+import de.gupta.security.themis.api.TokenVerificationConfiguration;
 import de.gupta.security.themis.api.TokenVerificationPolicy;
 import de.gupta.security.themis.api.TokenVerifier;
 import de.gupta.security.themis.api.TokenVerifierFactory;
@@ -43,7 +44,8 @@ final class TokenExchangeServiceExchangeTest
 
 	private InternalTokenExchangeService service(final TokenExchangeConfiguration<TestUser> configuration)
 	{
-		return service(TokenVerifierFactory.hmac(TokenVerificationPolicy.of(Duration.ZERO, true),
+		return service(TokenVerifierFactory.hmac(
+						TokenVerificationConfiguration.of(TokenVerificationPolicy.of(Duration.ZERO, true)),
 						HermesTestTokens.UPSTREAM_SECRET),
 				TokenIssuancePolicy.of("hermes", Set.of("internal-api"), Duration.ofMinutes(30)),
 				HermesTestTokens.INTERNAL_SECRET,
@@ -124,7 +126,8 @@ final class TokenExchangeServiceExchangeTest
 					false);
 
 			final ExchangeResult result = service(TokenVerifierFactory.hmac(
-						TokenVerificationPolicy.of(Duration.ZERO, true), HermesTestTokens.UPSTREAM_SECRET),
+							TokenVerificationConfiguration.of(TokenVerificationPolicy.of(Duration.ZERO, true)),
+							HermesTestTokens.UPSTREAM_SECRET),
 					issuancePolicy,
 					HermesTestTokens.INTERNAL_SECRET,
 					defaultConfiguration())
@@ -190,7 +193,8 @@ final class TokenExchangeServiceExchangeTest
 		void shouldRejectInvalidInternalSigningSecretDuringConstruction()
 		{
 			assertThatThrownBy(() -> service(TokenVerifierFactory.hmac(
-							TokenVerificationPolicy.of(Duration.ZERO, true), HermesTestTokens.UPSTREAM_SECRET),
+							TokenVerificationConfiguration.of(TokenVerificationPolicy.of(Duration.ZERO, true)),
+							HermesTestTokens.UPSTREAM_SECRET),
 					TokenIssuancePolicy.of("hermes", Set.of("internal-api"), Duration.ofMinutes(30)),
 					"short-secret",
 					defaultConfiguration()))
