@@ -16,7 +16,7 @@
     <url>https://github.com/de-gupta/security.hermes.git</url>
 
     <properties>
-        <security.dependencies.bom.version>0.2.1</security.dependencies.bom.version>
+        <security.dependencies.bom.version>0.2.3</security.dependencies.bom.version>
         <themis.version>2.5.1-SNAPSHOT</themis.version>
     </properties>
 

@@ -49,7 +49,7 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 		                .metamorphose(externalIdentity -> new ExternalIdentityContext(upstreamToken, externalIdentity,
 								issuedAt))
 		                .metamorphose(this::exchangeWithExternalIdentity)
-		                .ordain(() -> ExchangeFailure.of(ExchangeFailureReason.MISSING_EXTERNAL_IDENTITY,
+		                .infuse(() -> ExchangeFailure.of(ExchangeFailureReason.MISSING_EXTERNAL_IDENTITY,
 								configuration.externalIdentityClaimName()));
 	}
 
@@ -61,7 +61,7 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 								user,
 								externalIdentityContext.issuedAt()))
 		                .metamorphose(this::exchangeWithLocalUser)
-		                .ordain(() -> ExchangeFailure.of(ExchangeFailureReason.USER_NOT_FOUND,
+		                .infuse(() -> ExchangeFailure.of(ExchangeFailureReason.USER_NOT_FOUND,
 								externalIdentityContext.externalIdentity()));
 	}
 
@@ -73,7 +73,7 @@ final class InternalTokenExchangeServiceImpl<User> implements InternalTokenExcha
 								localSubject,
 								localUserContext.issuedAt()))
 		                .metamorphose(this::mintInternalToken)
-		                .ordain(() -> ExchangeFailure.of(ExchangeFailureReason.MISSING_LOCAL_SUBJECT));
+		                .infuse(() -> ExchangeFailure.of(ExchangeFailureReason.MISSING_LOCAL_SUBJECT));
 	}
 
 	private ExchangeResult mintInternalToken(final LocalSubjectContext<User> localSubjectContext)

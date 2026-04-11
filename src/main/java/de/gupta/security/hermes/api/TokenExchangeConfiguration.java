@@ -20,7 +20,7 @@ public record TokenExchangeConfiguration<User>(String externalIdentityClaimName,
 	{
 		return "sub".equals(externalIdentityClaimName)
 				? Optional.ofNullable(upstreamToken.subject())
-				: upstreamToken.stringClaim(externalIdentityClaimName);
+				: upstreamToken.property(externalIdentityClaimName);
 	}
 
 	public static <User> TokenExchangeConfiguration<User> of(final String externalIdentityClaimName,
