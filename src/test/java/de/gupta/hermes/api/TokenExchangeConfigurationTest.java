@@ -24,8 +24,7 @@ final class TokenExchangeConfigurationTest
 		final TokenExchangeConfiguration<TestUser> configuration = TokenExchangeConfiguration.of(
 				_ -> Optional.of(new TestUser("local-1")),
 				TestUser::id,
-				_ -> Set.of("ROLE_USER"),
-				_ -> 1L);
+				_ -> Set.of("ROLE_USER"));
 
 		assertThat(configuration.externalIdentityClaimName()).isEqualTo("sub");
 		assertThat(configuration.customClaimEnricher().enrich(new TestUser("local-1"), null)).isEmpty();
@@ -39,7 +38,6 @@ final class TokenExchangeConfigurationTest
 				_ -> Optional.of(new TestUser("local-1")),
 				TestUser::id,
 				_ -> Set.of("ROLE_USER"),
-				_ -> 1L,
 				CustomClaimEnricher.none(),
 				FIXED_CLOCK))
 				.isInstanceOf(IllegalArgumentException.class)
@@ -53,7 +51,6 @@ final class TokenExchangeConfigurationTest
 				_ -> Optional.of(new TestUser("local-1")),
 				TestUser::id,
 				_ -> Set.of("ROLE_USER"),
-				_ -> 4L,
 				(_, _) -> java.util.Map.of("tenant", "acme"),
 				FIXED_CLOCK);
 

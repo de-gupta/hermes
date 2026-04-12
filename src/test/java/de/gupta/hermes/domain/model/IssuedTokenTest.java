@@ -26,7 +26,6 @@ final class IssuedTokenTest
 				Instant.parse("2026-04-08T10:15:30Z"),
 				Instant.parse("2026-04-08T10:45:30Z"),
 				roles,
-				3L,
 				Optional.of("jti-1"),
 				Optional.of("https://issuer.example"));
 
@@ -47,7 +46,6 @@ final class IssuedTokenTest
 				Instant.parse("2026-04-08T10:15:30Z"),
 				Instant.parse("2026-04-08T10:45:30Z"),
 				Set.of("ROLE_USER"),
-				3L,
 				Optional.of("jti-1"),
 				Optional.of("https://issuer.example"));
 		final IssuedToken right = IssuedToken.of("token-value",
@@ -57,7 +55,6 @@ final class IssuedTokenTest
 				Instant.parse("2026-04-08T10:15:30Z"),
 				Instant.parse("2026-04-08T10:45:30Z"),
 				Set.of("ROLE_USER"),
-				3L,
 				Optional.of("jti-1"),
 				Optional.of("https://issuer.example"));
 
@@ -75,7 +72,6 @@ final class IssuedTokenTest
 				Instant.parse("2026-04-08T10:15:30Z"),
 				Instant.parse("2026-04-08T10:45:30Z"),
 				Set.of(),
-				3L,
 				Optional.empty(),
 				Optional.empty()))
 				.isInstanceOf(IllegalArgumentException.class)
@@ -92,7 +88,6 @@ final class IssuedTokenTest
 				Instant.parse("2026-04-08T10:15:30Z"),
 				Instant.parse("2026-04-08T10:45:30Z"),
 				Set.of(),
-				3L,
 				null,
 				Optional.empty()))
 				.isInstanceOf(NullPointerException.class)

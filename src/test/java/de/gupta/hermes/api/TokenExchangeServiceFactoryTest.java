@@ -44,7 +44,6 @@ final class TokenExchangeServiceFactoryTest
 		final ExchangeSuccess success = (ExchangeSuccess) result;
 		assertThat(success.token().subject()).isEqualTo("local-42");
 		assertThat(success.token().roles()).containsExactlyInAnyOrder("ROLE_ADMIN", "ROLE_USER");
-		assertThat(success.token().version()).isEqualTo(7L);
 		assertThat(success.token().upstreamIssuer()).contains("https://supabase.example");
 		assertThat(success.token().tokenId()).isPresent();
 
@@ -52,7 +51,6 @@ final class TokenExchangeServiceFactoryTest
 		assertThat(claims.get("sub")).isEqualTo("local-42");
 		assertThat(claims.get("iss")).isEqualTo("Hermes");
 		assertThat(HermesTestTokens.rolesFromClaims(claims)).containsExactly("ROLE_ADMIN", "ROLE_USER");
-		assertThat(claims.get("ver")).isEqualTo(7);
 		assertThat(claims.get("tenant")).isEqualTo("acme");
 		assertThat(claims.get("upstream_iss")).isEqualTo("https://supabase.example");
 	}
@@ -158,7 +156,6 @@ final class TokenExchangeServiceFactoryTest
 		return TokenExchangeConfiguration.of(externalId -> Optional.of(new TestUser("local-42", externalId)),
 				TestUser::id,
 				_ -> Set.of("ROLE_ADMIN", "ROLE_USER"),
-				_ -> 7L,
 				(_, _) -> Map.of("tenant", "acme"),
 				FIXED_CLOCK);
 	}
@@ -168,7 +165,6 @@ final class TokenExchangeServiceFactoryTest
 		return TokenExchangeConfiguration.of(_ -> Optional.empty(),
 				TestUser::id,
 				_ -> Set.of(),
-				_ -> 1L,
 				CustomClaimEnricher.none(),
 				FIXED_CLOCK);
 	}
@@ -178,7 +174,6 @@ final class TokenExchangeServiceFactoryTest
 		return TokenExchangeConfiguration.of(externalId -> Optional.of(new TestUser("local-42", externalId)),
 				TestUser::id,
 				_ -> Set.of(),
-				_ -> 1L,
 				CustomClaimEnricher.none(),
 				FIXED_CLOCK);
 	}

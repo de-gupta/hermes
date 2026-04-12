@@ -65,7 +65,6 @@ final class TokenExchangeServiceExchangeTest
 		return TokenExchangeConfiguration.of(externalId -> Optional.of(new TestUser("local-1", externalId)),
 				TestUser::id,
 				_ -> Set.of("ROLE_USER"),
-				_ -> 3L,
 				CustomClaimEnricher.none(),
 				FIXED_CLOCK);
 	}
@@ -92,12 +91,10 @@ final class TokenExchangeServiceExchangeTest
 					externalId -> Optional.of(new TestUser("local-1", externalId)),
 					TestUser::id,
 					_ -> Set.of("ROLE_USER"),
-					_ -> 3L,
 					(_, _) -> Map.of(
 							"sub", "attacker-subject",
 							"iss", "attacker-issuer",
 							"roles", List.of("ROLE_ATTACKER"),
-							"ver", 999L,
 							"upstream_iss", "attacker-upstream"),
 					FIXED_CLOCK);
 
@@ -110,7 +107,6 @@ final class TokenExchangeServiceExchangeTest
 			assertThat(claims.get("sub")).isEqualTo("local-1");
 			assertThat(claims.get("iss")).isEqualTo("hermes");
 			assertThat(HermesTestTokens.rolesFromClaims(claims)).containsExactly("ROLE_USER");
-			assertThat(claims.get("ver")).isEqualTo(3);
 			assertThat(claims.get("upstream_iss")).isEqualTo("https://supabase.example");
 		}
 
@@ -121,7 +117,6 @@ final class TokenExchangeServiceExchangeTest
 					Set.of(),
 					Duration.ofMinutes(30),
 					"roles",
-					"ver",
 					Optional.empty(),
 					false);
 
@@ -148,18 +143,13 @@ final class TokenExchangeServiceExchangeTest
 					SuccessCase.of("resolve by subject",
 							HermesTestTokens.upstreamTokenWithSubject("external-1"),
 							defaultConfiguration(),
-							success ->
-							{
-								assertThat(success.token().subject()).isEqualTo("local-1");
-								assertThat(success.token().version()).isEqualTo(3L);
-							}),
+							success -> assertThat(success.token().subject()).isEqualTo("local-1")),
 					SuccessCase.of("resolve by configurable email claim",
 							HermesTestTokens.upstreamTokenWithEmail("provider-subject", "alice@example.com"),
 							TokenExchangeConfiguration.of("email",
 									externalId -> Optional.of(new TestUser("local-alice", externalId)),
 									TestUser::id,
 									_ -> Set.of("ROLE_REPORTING"),
-									_ -> 11L,
 									(_, _) -> Map.of("department", "finance"),
 									FIXED_CLOCK),
 							success ->
@@ -231,18 +221,16 @@ final class TokenExchangeServiceExchangeTest
 									externalId -> Optional.of(new TestUser("local", externalId)),
 									TestUser::id,
 									_ -> Set.of(),
-									_ -> 1L,
 									CustomClaimEnricher.none(),
 									FIXED_CLOCK),
 							ExchangeFailureReason.MISSING_EXTERNAL_IDENTITY),
-					FailureCase.of("missing local subject",
-							HermesTestTokens.upstreamTokenWithSubject("provider-subject"),
-							TokenExchangeConfiguration.of(externalId -> Optional.of(new TestUser("", externalId)),
-									TestUser::id,
-									_ -> Set.of(),
-									_ -> 1L,
-									CustomClaimEnricher.none(),
-									FIXED_CLOCK),
+								 FailureCase.of("missing local subject",
+										 HermesTestTokens.upstreamTokenWithSubject("provider-subject"),
+										 TokenExchangeConfiguration.of(externalId -> Optional.of(new TestUser("", externalId)),
+												 TestUser::id,
+												 _ -> Set.of(),
+												 CustomClaimEnricher.none(),
+												 FIXED_CLOCK),
 							ExchangeFailureReason.MISSING_LOCAL_SUBJECT))
 			             .map(Arguments::of);
 		}

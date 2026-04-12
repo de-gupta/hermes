@@ -9,29 +9,22 @@ import java.util.Optional;
 import java.util.Set;
 
 public record TokenIssuancePolicy(String issuer, Set<String> audiences, Duration timeToLive, String roleClaimName,
-                                  String versionClaimName, Optional<String> upstreamIssuerClaimName,
-                                  boolean includeTokenId)
+                                  Optional<String> upstreamIssuerClaimName, boolean includeTokenId)
 {
 	public static TokenIssuancePolicy of(final String issuer,
 	                                     final Set<String> audiences,
 	                                     final Duration timeToLive,
 	                                     final String roleClaimName,
-	                                     final String versionClaimName,
 	                                     final Optional<String> upstreamIssuerClaimName,
 	                                     final boolean includeTokenId)
 	{
-		return new TokenIssuancePolicy(issuer,
-				audiences,
-				timeToLive,
-				roleClaimName,
-				versionClaimName,
-				upstreamIssuerClaimName,
+		return new TokenIssuancePolicy(issuer, audiences, timeToLive, roleClaimName, upstreamIssuerClaimName,
 				includeTokenId);
 	}
 
 	public static TokenIssuancePolicy of(final String issuer, final Set<String> audiences, final Duration timeToLive)
 	{
-		return of(issuer, audiences, timeToLive, "roles", "ver", Optional.of("upstream_iss"), true);
+		return of(issuer, audiences, timeToLive, "roles", Optional.of("upstream_iss"), true);
 	}
 
 	public TokenIssuancePolicy
@@ -44,11 +37,9 @@ public record TokenIssuancePolicy(String issuer, Set<String> audiences, Duration
 			throw new IllegalArgumentException("timeToLive must be positive");
 		}
 		roleClaimName = requireNonBlank(roleClaimName, "roleClaimName must not be blank");
-		versionClaimName = requireNonBlank(versionClaimName, "versionClaimName must not be blank");
 		upstreamIssuerClaimName =
 				Objects.requireNonNull(upstreamIssuerClaimName, "upstreamIssuerClaimName must not be null")
-				       .map(value -> requireNonBlank(value,
-							   "upstreamIssuerClaimName must not be blank"));
+				       .map(value -> requireNonBlank(value, "upstreamIssuerClaimName must not be blank"));
 	}
 
 	private static String requireNonBlank(final String value, final String message)

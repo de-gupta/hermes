@@ -20,7 +20,6 @@ final class TokenIssuancePolicyTest
 				Duration.ofMinutes(30));
 
 		assertThat(policy.roleClaimName()).isEqualTo("roles");
-		assertThat(policy.versionClaimName()).isEqualTo("ver");
 		assertThat(policy.upstreamIssuerClaimName()).contains("upstream_iss");
 		assertThat(policy.includeTokenId()).isTrue();
 	}
@@ -52,7 +51,6 @@ final class TokenIssuancePolicyTest
 				Set.of(),
 				Duration.ofMinutes(15),
 				"roles",
-				"ver",
 				Optional.of(" "),
 				false))
 				.isInstanceOf(IllegalArgumentException.class)
@@ -66,7 +64,6 @@ final class TokenIssuancePolicyTest
 				Set.of(),
 				Duration.ofMinutes(15),
 				"roles",
-				"ver",
 				null,
 				false))
 				.isInstanceOf(NullPointerException.class)

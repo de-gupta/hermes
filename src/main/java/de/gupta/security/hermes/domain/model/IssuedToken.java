@@ -9,24 +9,22 @@ import java.util.Optional;
 import java.util.Set;
 
 public record IssuedToken(String token, String subject, String issuer, Set<String> audiences, Instant issuedAt,
-                          Instant expiresAt, Set<String> roles, long version, Optional<String> tokenId,
+                          Instant expiresAt, Set<String> roles, Optional<String> tokenId,
                           Optional<String> upstreamIssuer)
 {
 	public static IssuedToken of(final String token, final String subject, final String issuer,
 	                             final Set<String> audiences, final Instant issuedAt, final Instant expiresAt,
-	                             final Set<String> roles, final long version, final Optional<String> tokenId,
+	                             final Set<String> roles, final Optional<String> tokenId,
 	                             final Optional<String> upstreamIssuer)
 	{
-		return new IssuedToken(token, subject, issuer, audiences, issuedAt, expiresAt, roles, version, tokenId,
-				upstreamIssuer);
+		return new IssuedToken(token, subject, issuer, audiences, issuedAt, expiresAt, roles, tokenId, upstreamIssuer);
 	}
 
 	public static IssuedToken of(final String token, final String subject, final String issuer,
 	                             final Set<String> audiences, final Instant issuedAt, final Instant expiresAt,
-	                             final Set<String> roles, final long version)
+	                             final Set<String> roles)
 	{
-		return of(token, subject, issuer, audiences, issuedAt, expiresAt, roles, version, Optional.empty(),
-				Optional.empty());
+		return of(token, subject, issuer, audiences, issuedAt, expiresAt, roles, Optional.empty(), Optional.empty());
 	}
 
 	public IssuedToken

@@ -35,22 +35,16 @@ final class InternalTokenMintingService<User>
 	                    final Instant issuedAt)
 	{
 		final Set<String> roles = resolveRoles(user);
-		final long version = resolveVersion(user);
 		final Instant expiresAt = issuedAt.plus(issuancePolicy.timeToLive());
 		final Optional<String> tokenId = createTokenId();
-		final Map<String, Object> claims = buildClaims(user, upstreamToken, roles, version);
+		final Map<String, Object> claims = buildClaims(user, upstreamToken, roles);
 
-		return issueJwt(localSubject, roles, version, issuedAt, expiresAt, tokenId, claims, upstreamToken);
+		return issueJwt(localSubject, roles, issuedAt, expiresAt, tokenId, claims, upstreamToken);
 	}
 
 	private Set<String> resolveRoles(final User user)
 	{
 		return new HashSet<>(configuration.roleResolver().fetchRoles(user));
-	}
-
-	private long resolveVersion(final User user)
-	{
-		return configuration.tokenVersionResolver().resolveVersion(user);
 	}
 
 	private Optional<String> createTokenId()
@@ -62,18 +56,15 @@ final class InternalTokenMintingService<User>
 
 	private Map<String, Object> buildClaims(final User user,
 	                                        final NormalizedToken upstreamToken,
-	                                        final Set<String> roles,
-	                                        final long version)
+	                                        final Set<String> roles)
 	{
 		final SequencedCollection<Function<? super ClaimAssemblyContext<User>, ? extends Map<String, Object>>>
-				claimFragments =
-				new ArrayList<>();
+				claimFragments = new ArrayList<>();
 		claimFragments.add(this::customClaims);
 		claimFragments.add(this::roleClaims);
-		claimFragments.add(this::versionClaims);
 		claimFragments.add(this::upstreamIssuerClaims);
 
-		return Unfolding.beckon(new ClaimAssemblyContext<>(user, upstreamToken, roles, version))
+		return Unfolding.beckon(new ClaimAssemblyContext<>(user, upstreamToken, roles))
 		                .convoke(claimFragments, fragments -> mergeClaimFragments(fragments))
 		                .coronate(Function.identity());
 	}
@@ -86,11 +77,6 @@ final class InternalTokenMintingService<User>
 	private Map<String, Object> roleClaims(final ClaimAssemblyContext<User> context)
 	{
 		return Map.of(issuancePolicy.roleClaimName(), context.roles().stream().sorted().toList());
-	}
-
-	private Map<String, Object> versionClaims(final ClaimAssemblyContext<User> context)
-	{
-		return Map.of(issuancePolicy.versionClaimName(), context.version());
 	}
 
 	private Map<String, Object> upstreamIssuerClaims(final ClaimAssemblyContext<User> context)
@@ -111,7 +97,6 @@ final class InternalTokenMintingService<User>
 
 	private ExchangeResult issueJwt(final String localSubject,
 	                                final Set<String> roles,
-	                                final long version,
 	                                final Instant issuedAt,
 	                                final Instant expiresAt,
 	                                final Optional<String> tokenId,
@@ -141,7 +126,6 @@ final class InternalTokenMintingService<User>
 					issuedAt,
 					expiresAt,
 					roles,
-					version,
 					tokenId,
 					upstreamToken.issuer()));
 		}
@@ -160,7 +144,7 @@ final class InternalTokenMintingService<User>
 		this.configuration = configuration;
 	}
 
-	private record ClaimAssemblyContext<T>(T user, NormalizedToken upstreamToken, Set<String> roles, long version)
+	private record ClaimAssemblyContext<T>(T user, NormalizedToken upstreamToken, Set<String> roles)
 	{
 	}
 }
